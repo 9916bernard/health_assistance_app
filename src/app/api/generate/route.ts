@@ -24,7 +24,7 @@ If the user types something unrelated to symptoms, reply:
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
+    const { prompt, fdaQuery } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
@@ -57,6 +57,23 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+
+    let fdaData = null;
+    if (fdaQuery && typeof fdaQuery === "string") {
+      try {
+        const fdaRes = await fetch(`https://api.fda.gov/${fdaQuery}`);
+        if (fdaRes.ok) {
+          fdaData = await fdaRes.json();
+        } else {
+          const err = await fdaRes.json();
+          console.error("openFDA API error:", err);
+          fdaData = { error: "openFDA API Error", details: err };
+        }
+      } catch (fdaErr) {
+        console.error("openFDA fetch error:", fdaErr);
+        fdaData = { error: "Failed to fetch openFDA data" };
+      }
+    }
 
     // ✅ MongoDB에 저장
     const client = await clientPromise;
