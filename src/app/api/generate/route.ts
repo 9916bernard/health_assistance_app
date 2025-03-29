@@ -1,6 +1,7 @@
 // src/app/api/generate/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { categorizeQuestion } from "@/lib/categorize";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -29,10 +30,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // ✅ 시스템 프롬프트와 유저 프롬프트를 합치기
     const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
 
-    // ✅ Gemini API 요청
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -47,6 +46,8 @@ export async function POST(req: Request) {
         }),
       }
     );
+    const category = categorizeQuestion(prompt);
+
 
     if (!response.ok) {
       const err = await response.json();
@@ -76,13 +77,15 @@ export async function POST(req: Request) {
 
     // ✅ MongoDB에 저장
     const client = await clientPromise;
+    // select collection named after the category
     const db = client.db("health-assistant");
-    const collection = db.collection("chats");
+    const collection = db.collection(category); // e.g., "Orthopedics", "General"
 
     await collection.insertOne({
       prompt,
       response: text,
       timestamp: new Date(),
+      category, // optional but nice to keep
     });
 
     return NextResponse.json({ text });
