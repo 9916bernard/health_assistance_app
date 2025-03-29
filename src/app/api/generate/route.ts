@@ -1,4 +1,6 @@
+// src/app/api/generate/route.ts
 import { NextResponse } from "next/server";
+import clientPromise from "@/lib/mongodb";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -19,7 +21,6 @@ If the user types something unrelated to symptoms, reply:
 "I am a health support assistant. Please tell me about any pain or symptoms you're feeling, and I will try to help."
 `;
 
-
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();
@@ -28,8 +29,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
+    // ✅ 시스템 프롬프트와 유저 프롬프트를 합치기
     const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
 
+    // ✅ Gemini API 요청
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -53,6 +56,17 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+
+    // ✅ MongoDB에 저장
+    const client = await clientPromise;
+    const db = client.db("health-assistant");
+    const collection = db.collection("chats");
+
+    await collection.insertOne({
+      prompt,
+      response: text,
+      timestamp: new Date(),
+    });
 
     return NextResponse.json({ text });
   } catch (error) {
