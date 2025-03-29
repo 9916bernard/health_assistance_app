@@ -20,7 +20,7 @@ export default function Home() {
       });
 
       const data = await res.json();
-      console.log("data:", data); // ✅ 응답 구조 확인
+      console.log("data:", data);
       setResponse(data.text || "No response received.");
     } catch (err) {
       console.error("Client error:", err);
@@ -33,12 +33,14 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
       <div className="max-w-md w-full bg-white p-6 rounded-lg shadow border border-gray-200">
-        <h1 className="text-xl font-semibold text-center mb-4">Gemini Prompt UI</h1>
+        <h1 className="text-xl font-semibold text-center mb-4">
+          🩺 Health Assistant
+        </h1>
 
         <textarea
           className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
           rows={4}
-          placeholder="Type your prompt..."
+          placeholder="Describe your symptoms..."
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
         />
@@ -48,7 +50,7 @@ export default function Home() {
           onClick={handleGenerate}
           disabled={loading}
         >
-          {loading ? "Loading..." : "Submit"}
+          {loading ? "Analyzing..." : "Submit"}
         </button>
 
         <div className="mt-4">
