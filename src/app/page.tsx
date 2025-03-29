@@ -1,43 +1,72 @@
 "use client";
-
 import { useState } from "react";
+import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
+import axios from "axios";
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 export default function Home() {
-  const [prompt, setPrompt] = useState("");
-  const [response, setResponse] = useState("");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userAddress, setUserAddress] = useState("");
+  const [hospitals, setHospitals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"easy" | "expert">("easy");
 
+  const [prompt, setPrompt] = useState("");
+  const [response, setResponse] = useState("");
+
+  const { isLoaded } = useLoadScript({ googleMapsApiKey: GOOGLE_MAPS_API_KEY });
+
+  const fetchHospitals = () => {
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const res = await fetch("/api/generate/nearbyHospital", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+          }),
+        });
+
+        const data = await res.json();
+        setUserLocation({ lat: coords.latitude, lng: coords.longitude });
+        setHospitals(data.hospitals);
+        setUserAddress(data.userAddress);
+        setLoading(false);
+      },
+      () => {
+        alert("Location access denied.");
+        setLoading(false);
+      }
+    );
+  };
+
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim()) {
+      alert("Please enter a prompt.");
+      return;
+    }
     setLoading(true);
     setResponse("");
 
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, mode }),
-      });
-
-      const data = await res.json();
-      console.log("data:", data);
-      setResponse(data.text || "No response received.");
-    } catch (err) {
-      console.error("Client error:", err);
-      setResponse("Error generating response.");
+      const res = await axios.post("/api/generate/route", { prompt, mode });
+      setResponse(res.data.text || "No response from Gemini.");
+    } catch (error) {
+      console.error("Error fetching response from Gemini:", error);
+      setResponse("Failed to get a response from Gemini.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100 p-6">
-      <div className="max-w-xl w-full bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-6">
-          🩺 Health Support Assistant
-        </h1>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-start p-8">
+      <h1 className="text-3xl font-bold mb-4 text-blue-700">🩺 Health Support Assistant</h1>
 
+      <div className="w-full max-w-xl mb-10">
         <div className="mb-4 flex justify-between items-center">
           <span className="text-sm font-medium text-gray-700">Vocabulary Level:</span>
           <div className="flex gap-2">
@@ -64,11 +93,7 @@ export default function Home() {
           </div>
         </div>
 
-        <label htmlFor="symptom" className="block mb-2 font-medium text-gray-800">
-          Describe your symptoms:
-        </label>
         <textarea
-          id="symptom"
           className="w-full p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
           placeholder="e.g., I have a sore throat and mild fever..."
           value={prompt}
@@ -90,6 +115,63 @@ export default function Home() {
             {loading ? "Thinking..." : response || "No response yet."}
           </div>
         </div>
+      </div>
+
+      <hr className="w-full border-gray-300 mb-10" />
+
+      <div className="w-full max-w-xl text-center">
+        <button
+          onClick={fetchHospitals}
+          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+          disabled={loading}
+        >
+          {loading ? "Loading..." : "Find Nearby Hospitals"}
+        </button>
+
+        {userAddress && (
+          <p className="mt-4 text-gray-700">📍 Your Location: {userAddress}</p>
+        )}
+
+        {isLoaded && userLocation && (
+          <GoogleMap
+            center={userLocation}
+            zoom={13}
+            mapContainerStyle={{
+              width: "100%",
+              height: "500px",
+              marginTop: "20px",
+            }}
+          >
+            <Marker position={userLocation} label="You" />
+            {hospitals.map((h) => (
+              <Marker key={h.place_id} position={h.location} label={h.name} />
+            ))}
+          </GoogleMap>
+        )}
+
+        {hospitals.length > 0 && (
+          <div className="mt-6 w-full max-w-2xl text-left">
+            <h2 className="text-xl font-semibold mb-2">Nearby Hospitals:</h2>
+            <ul>
+              {hospitals.map((h) => (
+                <li key={h.place_id} className="mb-3">
+                  <strong>{h.name}</strong>
+                  <br />
+                  {h.address}
+                  <br />
+                  <a
+                    className="text-blue-500 underline"
+                    href={`https://www.google.com/maps/search/?api=1&query=${h.location.lat},${h.location.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View on Google Maps
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
