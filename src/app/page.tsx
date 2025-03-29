@@ -20,8 +20,10 @@ export default function Home() {
       });
 
       const data = await res.json();
-      setResponse(data.text);
+      console.log("data:", data); // ✅ 응답 구조 확인
+      setResponse(data.text || "No response received.");
     } catch (err) {
+      console.error("Client error:", err);
       setResponse("Error generating response.");
     } finally {
       setLoading(false);
@@ -29,29 +31,31 @@ export default function Home() {
   };
 
   return (
-    <div className="w-full max-w-md p-6 border rounded bg-gray-50">
-      <h1 className="text-xl font-semibold mb-4 text-center">AI Prompt Interface</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+      <div className="max-w-md w-full bg-white p-6 rounded-lg shadow border border-gray-200">
+        <h1 className="text-xl font-semibold text-center mb-4">Gemini Prompt UI</h1>
 
-      <textarea
-        className="w-full p-2 border rounded mb-3 text-black"
-        placeholder="Type your prompt here..."
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        rows={4}
-      />
+        <textarea
+          className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
+          rows={4}
+          placeholder="Type your prompt..."
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+        />
 
-      <button
-        className="w-full bg-gray-800 text-white py-2 rounded disabled:opacity-60"
-        onClick={handleGenerate}
-        disabled={loading}
-      >
-        {loading ? "Loading..." : "Submit"}
-      </button>
+        <button
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+          onClick={handleGenerate}
+          disabled={loading}
+        >
+          {loading ? "Loading..." : "Submit"}
+        </button>
 
-      <div className="mt-4">
-        <h2 className="text-base font-medium mb-1">Response:</h2>
-        <div className="p-3 border rounded text-sm bg-white">
-          {response || "No response yet."}
+        <div className="mt-4">
+          <h2 className="font-medium text-gray-700 mb-1">Response:</h2>
+          <div className="p-3 border rounded bg-gray-50 text-sm whitespace-pre-wrap">
+            {loading ? "Thinking..." : response || "No response yet."}
+          </div>
         </div>
       </div>
     </div>
