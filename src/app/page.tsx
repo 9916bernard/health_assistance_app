@@ -8,7 +8,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-
+  
   const handleDeleteOne = async (id: string) => {
     const confirmDelete = window.confirm("Delete this message?");
     if (!confirmDelete) return;
