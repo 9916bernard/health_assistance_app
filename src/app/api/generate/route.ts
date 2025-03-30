@@ -6,17 +6,15 @@ import { categorizeQuestion } from "@/lib/categorize";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const SYSTEM_PROMPT = `
-You are a friendly health assistant. Your job is to explain possible health issues in a simple, understandable way for non-medical users.
+You are a friendly health assistant. Your job is to explain possible health issues in a simple and general way for non-medical users. Always use easy-to-understand and general language.
 
 Always respond using this format:
 
-Urgency Score (1–10): ...
+Urgency Score (1–10): <number only>
 Most Likely Condition: ...
-What You Can Do Now: ...
 Recommended Clinic: ...
-OTC Medication: ...
-Best Case Scenario: ...
-Worst Case Scenario: ...
+Recommanded Medication: <Comma-separated list of real medicine brand names only, no descriptions>
+What You Can Do Now: ...
 
 If the user types something unrelated to symptoms, reply:
 "I am a health support assistant. Please tell me about any pain or symptoms you're feeling, and I will try to help."
@@ -51,7 +49,6 @@ export async function POST(req: Request) {
     );
     const category = categorizeQuestion(prompt);
 
-
     if (!response.ok) {
       const err = await response.json();
       console.error("Gemini API error:", err);
@@ -66,37 +63,50 @@ export async function POST(req: Request) {
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
       "No response from Gemini.";
 
-    let fdaData = null;
-    if (fdaQuery && typeof fdaQuery === "string") {
+    // openFDA: 추출한 OTC Medication 이름으로 검색
+    const otcMatch = text.match(/Recommanded Medication:\s*(.+)/i);
+    const otcName = otcMatch?.[1]?.split(",")[0].trim();
+
+    let fdaInfo = "";
+    if (otcName) {
       try {
-        const fdaRes = await fetch(`https://api.fda.gov/${fdaQuery}`);
+        const fdaRes = await fetch(
+          `https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodeURIComponent(
+            otcName
+          )}"`
+        );
         if (fdaRes.ok) {
-          fdaData = await fdaRes.json();
+          const fdaJson = await fdaRes.json();
+          const firstResult = fdaJson.results?.[0];
+          const usage =
+            firstResult?.description?.[0] ||
+            firstResult?.indications_and_usage?.[0] ||
+            "No usage info found.";
+          const warnings = firstResult?.warnings?.[0] || "No warnings info found.";
+          fdaInfo = `\n\n💊 Drug Info (from openFDA for ${otcName}):\n\nUsage: ${usage}\n\nWarnings: ${warnings}\n`;
         } else {
           const err = await fdaRes.json();
           console.error("openFDA API error:", err);
-          fdaData = { error: "openFDA API Error", details: err };
         }
       } catch (fdaErr) {
         console.error("openFDA fetch error:", fdaErr);
-        fdaData = { error: "Failed to fetch openFDA data" };
       }
     }
 
-    // ✅ MongoDB에 저장
+    // MongoDB에 저장
     const client = await clientPromise;
-    // select collection named after the category
     const db = client.db("health-assistant");
-    const collection = db.collection(category); // e.g., "Orthopedics", "General"
-
+    const collection = db.collection(category);
     await collection.insertOne({
       prompt,
       response: text,
+      otcName,
       timestamp: new Date(),
-      category, // optional but nice to keep
+      category,
     });
 
-    return NextResponse.json({ text });
+    const finalText = `${text}${fdaInfo}`;
+    return NextResponse.json({ text: finalText });
   } catch (error) {
     console.error("Server error:", error);
     return NextResponse.json(
