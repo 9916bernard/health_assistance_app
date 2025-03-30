@@ -3,23 +3,49 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, MessageSquareText, Clock } from 'lucide-react';
+import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 import { AnimatePresence, motion } from 'framer-motion';
+
+// Map container styles
+const mapContainerStyle = {
+  width: '100%',
+  height: '400px',
+};
+
+// Default center location if geolocation fails
+const defaultCenter = {
+  lat: 40.748817, // New York City
+  lng: -73.985428,
+};
 
 export default function Dashboard() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [prompt, setPrompt] = useState('');
-  const [response, setResponse] = useState('');
+  const [rawResponse, setRawResponse] = useState('');
+  const [parsedResponse, setParsedResponse] = useState({
+    urgencyScore: '',
+    mostLikelyCondition: '',
+    recommendedClinic: '',
+    recommendedMedication: '',
+    whatYouCanDoNow: '',
+  });
+  const [medicationFdaInfo, setMedicationFdaInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
   const [hospitals, setHospitals] = useState<any[]>([]);
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
+
+  // 지도/병원 정보 및 medication detail 표시 여부
+  const [clinicMapVisible, setClinicMapVisible] = useState(false);
+  const [medicationDetailVisible, setMedicationDetailVisible] = useState(false);
+
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,7 +56,6 @@ export default function Dashboard() {
     } else {
       setAuthorized(true);
     }
-
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -46,6 +71,31 @@ export default function Dashboard() {
       );
     }
   }, [router]);
+
+  const parseResponse = (text: string) => {
+    const lines = text.split('\n').filter((line) => line.trim() !== '');
+    const parsed = {
+      urgencyScore: '',
+      mostLikelyCondition: '',
+      recommendedClinic: '',
+      recommendedMedication: '',
+      whatYouCanDoNow: '',
+    };
+    lines.forEach((line) => {
+      if (line.startsWith("Urgency Score")) {
+        parsed.urgencyScore = line.split(":")[1]?.trim() || '';
+      } else if (line.startsWith("Most Likely Condition")) {
+        parsed.mostLikelyCondition = line.split(":")[1]?.trim() || '';
+      } else if (line.startsWith("Recommended Clinic")) {
+        parsed.recommendedClinic = line.split(":")[1]?.trim() || '';
+      } else if (line.startsWith("Recommanded Medication")) {
+        parsed.recommendedMedication = line.split(":")[1]?.trim() || '';
+      } else if (line.startsWith("What You Can Do Now")) {
+        parsed.whatYouCanDoNow = line.split(":")[1]?.trim() || '';
+      }
+    });
+    return parsed;
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -63,20 +113,37 @@ export default function Dashboard() {
     }
 
     setLoading(true);
-    setResponse('');
-
+    setRawResponse('');
+    setMedicationFdaInfo('');
+    setParsedResponse({
+      urgencyScore: '',
+      mostLikelyCondition: '',
+      recommendedClinic: '',
+      recommendedMedication: '',
+      whatYouCanDoNow: '',
+    });
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, username }),
       });
-
       const data = await res.json();
-      setResponse(data.text || 'No response received.');
+      let fullText = data.text || 'No response received.';
+      let mainText = fullText;
+      let fdaInfo = '';
+      const marker = "💊 Drug Info";
+      if (fullText.includes(marker)) {
+         const parts = fullText.split(marker);
+         mainText = parts[0].trim();
+         fdaInfo = marker + parts[1].trim();
+      }
+      setRawResponse(mainText);
+      setMedicationFdaInfo(fdaInfo);
+      setParsedResponse(parseResponse(mainText));
     } catch (err) {
       console.error('Client error:', err);
-      setResponse('Error generating response.');
+      setRawResponse('Error generating response.');
     } finally {
       setLoading(false);
     }
@@ -85,13 +152,12 @@ export default function Dashboard() {
   const handleFindHospitals = async () => {
     if (!prompt.trim()) return;
     if (!userLocation) {
-      setResponse('Please allow location access to find hospitals.');
+      setRawResponse('Please allow location access to find hospitals.');
       return;
     }
 
     setLoadingHospitals(true);
     setHospitals([]);
-
     try {
       const res = await fetch('/api/nearbyHospital', {
         method: 'POST',
@@ -102,17 +168,16 @@ export default function Dashboard() {
           symptom: prompt,
         }),
       });
-
       const data = await res.json();
       if (data.error) {
-        setResponse(data.error);
+        setRawResponse(data.error);
       } else {
         setHospitals(data.hospitals || []);
-        setResponse(`Hospitals near you (${data.userAddress}):`);
+        setRawResponse(`Hospitals near you (${data.userAddress}):`);
       }
     } catch (err) {
       console.error('Hospital fetch error:', err);
-      setResponse('Error fetching hospital info.');
+      setRawResponse('Error fetching hospital info.');
     } finally {
       setLoadingHospitals(false);
     }
@@ -142,7 +207,6 @@ export default function Dashboard() {
 
     const confirmDelete = window.confirm('Delete this message?');
     if (!confirmDelete) return;
-
     try {
       const res = await fetch(`/api/history/${id}`, {
         method: 'DELETE',
@@ -150,7 +214,6 @@ export default function Dashboard() {
         body: JSON.stringify({ username }),
       });
       const data = await res.json();
-
       if (res.ok && data.success) {
         setHistory((prev) => prev.filter((msg) => msg._id !== id));
       } else {
@@ -167,11 +230,13 @@ export default function Dashboard() {
     if (!username) return;
 
     try {
+
       const res = await fetch('/api/history', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       });
+
 
       const data = await res.json();
       if (res.ok) {
@@ -186,13 +251,30 @@ export default function Dashboard() {
     }
   };
 
-  if (!authorized) return null;
+  // "Find Nearby Hospitals" 버튼은 지도 표시를 위해 토글합니다.
+  const handleShowClinicMap = () => {
+    handleFindHospitals();
+    setClinicMapVisible((prev) => !prev);
+  };
+
+  // Medication Details 버튼 클릭 시 openFDA 정보 토글
+  const handleMedicationDetail = () => {
+    setMedicationDetailVisible((prev) => !prev);
+  };
+
+  if (!authorized || !isLoaded) return null;
+
+  // Urgency Score 항상 숫자가 표시되도록 기본값 처리
+  const urgencyValue = parseInt(parsedResponse.urgencyScore) || 0;
+  const urgencyBarWidth = `${(urgencyValue / 10) * 100}%`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-100 p-4 md:p-10">
-      <div className="max-w-2xl mx-auto relative">
+      <div className="max-w-4xl mx-auto relative">
         <header className="flex justify-between items-center mb-4">
+
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Health Assistant</h1>
+
           <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition">
             <LogOut size={24} />
           </button>
@@ -241,7 +323,7 @@ export default function Dashboard() {
                 <textarea
                   className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
                   rows={4}
-                  placeholder="Describe your symptoms..."
+                  placeholder="Describe your symptoms as specific as possible..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                 />
@@ -254,37 +336,108 @@ export default function Dashboard() {
                   {loading ? 'Analyzing...' : 'Get Health Report'}
                 </button>
 
-                <button
-                  className="w-full mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition disabled:opacity-60"
-                  onClick={handleFindHospitals}
-                  disabled={loadingHospitals}
-                >
-                  {loadingHospitals ? 'Searching...' : 'Find Nearby Hospitals'}
-                </button>
+                {rawResponse && !loading && !loadingHospitals && (
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 1. 응급 점수 */}
+                    <div className="bg-white shadow p-4 rounded">
+                      <h2 className="text-lg font-semibold mb-2">Urgency Score</h2>
+                      <div className="flex items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-4">
+                          <div className="bg-red-500 h-4 rounded-full" style={{ width: urgencyBarWidth }}></div>
+                        </div>
+                        <span className="ml-2 text-sm font-semibold text-gray-700">
+                          {urgencyValue}/10
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Monitor your symptoms and seek advice if you notice any changes.
+                      </p>
+                    </div>
 
-                <div className="mt-4">
-                  <h2 className="font-medium text-gray-700 mb-1">Response:</h2>
-                  <div className="p-3 border rounded bg-gray-50 text-sm whitespace-pre-wrap min-h-[80px]">
-                    {loading || loadingHospitals
-                      ? 'Processing...'
-                      : response || 'No response yet.'}
-                  </div>
-                </div>
+                    {/* 2. Most Likely Condition */}
+                    <div className="bg-white shadow p-4 rounded flex flex-col items-center justify-center">
+                      <h2 className="text-lg font-semibold">Most Likely Condition</h2>
+                      <p className="text-2xl font-bold mt-2">{parsedResponse.mostLikelyCondition}</p>
+                    </div>
 
-                {hospitals.length > 0 && (
-                  <div className="mt-6">
-                    <h2 className="text-lg font-semibold text-green-700 mb-2">Nearby Hospitals:</h2>
-                    <ul className="space-y-4">
-                      {hospitals.map((h: any) => (
-                        <li
-                          key={h.place_id}
-                          className="p-4 bg-green-50 border border-green-200 rounded-md"
-                        >
-                          <h3 className="text-sm font-bold text-green-700">{h.name}</h3>
-                          <p className="text-sm text-gray-600">{h.address}</p>
-                        </li>
-                      ))}
-                    </ul>
+                    {/* 3. What You Can Do Now (전체 가로 사용) */}
+                    <div className="bg-white shadow p-4 rounded col-span-1 md:col-span-2">
+                      <h2 className="text-lg font-semibold mb-2">What You Can Do Now</h2>
+                      <p>{parsedResponse.whatYouCanDoNow}</p>
+                    </div>
+
+                    {/* 4. Clinics & Hospitals */}
+                    <div className="bg-white shadow p-4 rounded">
+                      <h2 className="text-lg font-semibold mb-2">Clinics &amp; Hospitals</h2>
+                      <div className="mb-3">
+                        <h3 className="text-sm font-medium text-gray-700">Recommended Clinic:</h3>
+                        <p className="mt-1 text-sm text-gray-600">
+                          {parsedResponse.recommendedClinic || 'No clinic recommendation provided.'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleShowClinicMap}
+                        className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
+                      >
+                        Find Nearby Hospitals
+                      </button>
+                      {clinicMapVisible && (
+                        <div className="mt-4">
+                          <GoogleMap
+                            mapContainerStyle={mapContainerStyle}
+                            zoom={14}
+                            center={
+                              userLocation
+                                ? { lat: userLocation.latitude, lng: userLocation.longitude }
+                                : defaultCenter
+                            }
+                          >
+                            {userLocation && (
+                              <Marker
+                                position={{ lat: userLocation.latitude, lng: userLocation.longitude }}
+                                label="You"
+                              />
+                            )}
+                            {hospitals.map((h: any) => (
+                              <Marker
+                                key={h.place_id}
+                                position={{ lat: h.location.lat, lng: h.location.lng }}
+                                title={h.name}
+                              />
+                            ))}
+                          </GoogleMap>
+                          {hospitals.length > 0 && (
+                            <ul className="mt-2 space-y-2">
+                              {hospitals.map((h: any) => (
+                                <li key={h.place_id} className="p-2 bg-green-50 border border-green-200 rounded">
+                                  <h3 className="text-sm font-bold text-green-700">{h.name}</h3>
+                                  <p className="text-sm text-gray-600">{h.address}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 5. Medication Recommendation */}
+                    <div className="bg-white shadow p-4 rounded">
+                      <h2 className="text-lg font-semibold mb-2">Medication Recommendation</h2>
+                      <p className="mt-2">{parsedResponse.recommendedMedication}</p>
+                      <button
+                        onClick={handleMedicationDetail}
+                        className="mt-2 w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition"
+                      >
+                        Medication Details
+                      </button>
+                      {medicationDetailVisible && (
+                        <div className="mt-4">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                            {medicationFdaInfo || 'No medication details available.'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </motion.div>
@@ -302,8 +455,12 @@ export default function Dashboard() {
                 <div className="max-h-64 overflow-y-auto space-y-2 text-sm">
                   {history.map((msg) => (
                     <div key={msg._id} className="p-4 border rounded bg-gray-50 space-y-1">
-                      <p><strong>User:</strong> {msg.prompt}</p>
-                      <p><strong>Gemini:</strong> {msg.response}</p>
+                      <p>
+                        <strong>User:</strong> {msg.prompt}
+                      </p>
+                      <p>
+                        <strong>Gemini:</strong> {msg.response}
+                      </p>
                       <p className="text-xs text-gray-500">
                         {new Date(msg.timestamp).toLocaleString()}
                       </p>
@@ -316,7 +473,6 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
-
                 <button
                   onClick={handleDeleteHistory}
                   className="mt-4 w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition"
