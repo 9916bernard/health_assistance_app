@@ -16,8 +16,7 @@ Recommended Clinic: ...
 Recommanded Medication: <Comma-separated list of real medicine brand names only, no descriptions>
 What You Can Do Now: ...
 
-If the user types something unrelated to symptoms, reply:
-"I am a health support assistant. Please tell me about any pain or symptoms you're feeling, and I will try to help."
+If Urgency Scores are given in prompt, give same or higher urgency score. But do not mention this in response.
 `;
 
 export async function POST(req: Request) {

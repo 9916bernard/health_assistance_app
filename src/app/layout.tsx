@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Health Assistant App',
+  title: 'SymptomSense',
   description: 'An AI health assistant powered by Gemini + MongoDB',
 };
 
