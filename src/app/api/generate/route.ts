@@ -36,15 +36,14 @@ export async function POST(req: Request) {
         .sort({ timestamp: -1 })
         .limit(3) // 최근 3개만 사용
         .toArray();
-
-      if (past.length > 0) {
-        historyContext = past
-          .map(
-            (p, idx) =>
-              `Previous Diagnosis ${idx + 1}:\n- Previous UrgencyScore: ${p.urgencyScore}`
-          )
-          .join('\n\n');
-      }
+        if (past.length > 0) {
+          historyContext = past
+            .map((p, idx) => {
+              const score = p.urgencyScore || 'N/A';
+              return `Previous Diagnosis ${idx + 1}:\n- Urgency Score: ${score}`;
+            })
+            .join('\n\n');
+        }
     }
     console.log("Incoming request:", useHistoryContext ? { prompt, username, historyContext }: { prompt, username});
 
