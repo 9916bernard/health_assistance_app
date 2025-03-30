@@ -27,7 +27,10 @@ export async function POST(req: Request) {
     const { prompt, fdaQuery } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Prompt is required" },
+        { status: 400 }
+      );
     }
 
     const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
@@ -40,9 +43,9 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text: fullPrompt }]
-            }
-          ]
+              parts: [{ text: fullPrompt }],
+            },
+          ],
         }),
       }
     );
@@ -52,11 +55,16 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const err = await response.json();
       console.error("Gemini API error:", err);
-      return NextResponse.json({ error: "Gemini API Error", details: err }, { status: 500 });
+      return NextResponse.json(
+        { error: "Gemini API Error", details: err },
+        { status: 500 }
+      );
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+    const text =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "No response from Gemini.";
 
     let fdaData = null;
     if (fdaQuery && typeof fdaQuery === "string") {
@@ -91,6 +99,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ text });
   } catch (error) {
     console.error("Server error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
