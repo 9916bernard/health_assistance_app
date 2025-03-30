@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState<'response' | 'history'>('response');
+  const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -52,20 +52,14 @@ export default function Dashboard() {
   };
 
   const handleLoadHistory = async () => {
-    if (!showHistory) {
-      try {
-        const res = await fetch('/api/history');
-        const data = await res.json();
-        setHistory(data.messages || []);
-      } catch (err) {
-        console.error('Error fetching history:', err);
-      }
-    } else {
-      setHistory([]);
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      setHistory(data.messages || []);
+      setShowHistory(true);
+    } catch (err) {
+      console.error('Error fetching history:', err);
     }
-
-    setShowHistory(!showHistory);
-    setActiveTab('history');
   };
 
   const handleDeleteOne = async (id: string) => {
@@ -110,70 +104,74 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-100 p-4 md:p-10">
       <div className="max-w-2xl mx-auto relative">
-        <header className="flex justify-between items-center mb-6">
+        <header className="flex justify-between items-center mb-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Gemini Prompt</h1>
           <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition">
             <LogOut size={24} />
           </button>
         </header>
 
+        <div className="flex space-x-2 mb-4">
+          <button
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+              activeTab === 'chat'
+                ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
+                : 'bg-gray-100 text-gray-600 hover:text-blue-500'
+            }`}
+            onClick={() => setActiveTab('chat')}
+          >
+            <MessageSquareText size={18} /> Chat
+          </button>
+          <button
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+              activeTab === 'history'
+                ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
+                : 'bg-gray-100 text-gray-600 hover:text-blue-500'
+            }`}
+            onClick={() => {
+              handleLoadHistory();
+              setActiveTab('history');
+            }}
+          >
+            <Clock size={18} /> History
+          </button>
+        </div>
+
         <motion.div
           layout
           transition={{ duration: 0.4, type: 'spring' }}
-          className="bg-white shadow-lg rounded-2xl p-6 border border-gray-200"
+          className="bg-white shadow-lg rounded-b-2xl rounded-tr-2xl p-6 border border-gray-200"
         >
-          <textarea
-            className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
-            rows={4}
-            placeholder="Type your prompt..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
-
-          <button
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
-            onClick={handleGenerate}
-            disabled={loading}
-          >
-            {loading ? 'Loading...' : 'Submit'}
-          </button>
-
-          <div className="mt-4 flex space-x-2">
-            <button
-              className={`flex-1 py-2 rounded ${
-                activeTab === 'response'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-              onClick={() => setActiveTab('response')}
-            >
-              <MessageSquareText className="inline-block mr-1" size={16} /> Response
-            </button>
-            <button
-              className={`flex-1 py-2 rounded ${
-                activeTab === 'history'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-              onClick={handleLoadHistory}
-            >
-              <Clock className="inline-block mr-1" size={16} /> History
-            </button>
-          </div>
-
           <AnimatePresence mode="wait">
-            {activeTab === 'response' && (
+            {activeTab === 'chat' && (
               <motion.div
-                key="response"
+                key="chat"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className="mt-4"
               >
-                <h2 className="font-medium text-gray-700 mb-1">Response:</h2>
-                <div className="p-3 border rounded bg-gray-50 text-sm whitespace-pre-wrap min-h-[80px]">
-                  {loading ? 'Thinking...' : response || 'No response yet.'}
+                <textarea
+                  className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                  placeholder="Type your prompt..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                />
+
+                <button
+                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+                  onClick={handleGenerate}
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Submit'}
+                </button>
+
+                <div className="mt-4">
+                  <h2 className="font-medium text-gray-700 mb-1">Response:</h2>
+                  <div className="p-3 border rounded bg-gray-50 text-sm whitespace-pre-wrap min-h-[80px]">
+                    {loading ? 'Thinking...' : response || 'No response yet.'}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -185,7 +183,6 @@ export default function Dashboard() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className="mt-4"
               >
                 <h2 className="font-medium text-gray-700 mb-1">Chat History:</h2>
                 <div className="max-h-64 overflow-y-auto space-y-2 text-sm">
