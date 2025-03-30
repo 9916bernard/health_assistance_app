@@ -286,8 +286,8 @@ export default function Dashboard() {
     <button
       className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
         activeTab === 'chat'
-          ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
-          : 'bg-gray-100 text-gray-600 hover:text-blue-500'
+          ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+          : 'bg-gray-100 text-gray-600 hover:text-green-500'
       }`}
       onClick={() => setActiveTab('chat')}
     >
@@ -296,8 +296,8 @@ export default function Dashboard() {
     <button
       className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
         activeTab === 'history'
-          ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
-          : 'bg-gray-100 text-gray-600 hover:text-blue-500'
+          ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+          : 'bg-gray-100 text-gray-600 hover:text-green-500'
       }`}
       onClick={() => {
         handleLoadHistory();
@@ -356,26 +356,53 @@ export default function Dashboard() {
 
                 {rawResponse && !loading && !loadingHospitals && (
                   <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* 1. 응급 점수 */}
-                    <div className="bg-white shadow p-4 rounded">
-                      <h2 className="text-lg font-semibold mb-2">Urgency Score</h2>
-                      <div className="flex items-center">
-                        <div className="w-full bg-gray-200 rounded-full h-4">
-                          <div className="bg-red-500 h-4 rounded-full" style={{ width: urgencyBarWidth }}></div>
-                        </div>
-                        <span className="ml-2 text-sm font-semibold text-gray-700">
-                          {urgencyValue}/10
-                        </span>
+                    <div className="bg-white shadow p-4 rounded col-span-1 md:col-span-2">
+                      <h2 className="text-lg font-semibold mb-4">Urgency Score</h2>
+                      <div className="flex flex-col items-center justify-center">
+                        <svg width="200" height="100" viewBox="0 0 200 100">
+                          <defs>
+                            <linearGradient id="urgencyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stop-color="#facc15" />  {/* yellow-000 */}
+                              <stop offset="50%" stop-color="#f97316" /> {/* orange-500 */}
+                              <stop offset="100%" stop-color="#ef4444" /> {/* red-900 */}
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M10,100 A90,90 0 0,1 190,100"
+                            fill="none"
+                            stroke="url(#urgencyGradient)"
+                            strokeWidth="20"
+                          />
+                          <line
+                            x1="100"
+                            y1="100"
+                            x2="100"
+                            y2="20"
+                            stroke="black"
+                            strokeWidth="2"
+                            transform={`rotate(${(urgencyValue - 5) * 18} 100 100)`} // max 180° / 10단계
+                          />
+                          <circle
+                            cx="100"
+                            cy="100"
+                            r="5"
+                            fill="black"
+                            transform={`rotate(${(urgencyValue - 1) * 18} 100 100)`} // max 180° / 10단계
+                          />
+                        </svg>
+                        <span className="mt-2 text-xl font-bold text-gray-800">{urgencyValue}/10</span>
+                        <p className="text-sm mt-1 text-black-600">
+                          {urgencyValue <= 3
+                            ? 'You are fine!'
+                            : urgencyValue <= 7
+                            ? 'Warning!'
+                            : 'Dangerous!'}
+                        </p>
                       </div>
-                      <p className="mt-2 text-xs text-gray-500">
-                        Monitor your symptoms and seek advice if you notice any changes.
-                      </p>
                     </div>
-
-                    {/* 2. Most Likely Condition */}
-                    <div className="bg-white shadow p-4 rounded flex flex-col items-center justify-center">
+                    <div className="bg-white shadow p-4 rounded col-span-1 md:col-span-2">
                       <h2 className="text-lg font-semibold">Most Likely Condition</h2>
-                      <p className="text-2xl font-bold mt-2">{parsedResponse.mostLikelyCondition}</p>
+                      <p className="text-2xl font-bold mt-2 text-center">{parsedResponse.mostLikelyCondition}</p>
                     </div>
 
                     {/* 3. What You Can Do Now (전체 가로 사용) */}
@@ -395,7 +422,7 @@ export default function Dashboard() {
                       </div>
                       <button
                         onClick={handleShowClinicMap}
-                        className="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-600 transition"
+                        className="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-700 transition"
                       >
                         Find Nearby Hospitals
                       </button>
@@ -444,7 +471,7 @@ export default function Dashboard() {
                       <p className="mt-2">{parsedResponse.recommendedMedication}</p>
                       <button
                         onClick={handleMedicationDetail}
-                        className="mt-2 w-full bg-orange-600 text-white py-2 rounded hover:bg-purple-700 transition"
+                        className="mt-2 w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-700 transition"
                       >
                         Medication Details
                       </button>
