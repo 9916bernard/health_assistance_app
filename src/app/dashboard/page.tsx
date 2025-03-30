@@ -326,13 +326,14 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-700 font-medium">Include Past Symptom</span>
               <button
+                type="button"
                 onClick={() => setUseHistoryContext(!useHistoryContext)}
-                className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
+                className={`cursor-pointer w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
                   useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
                 }`}
               >
                 <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+                  className={`cursor-pointer bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
                     useHistoryContext ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 ></div>
