@@ -281,49 +281,61 @@ export default function Dashboard() {
           Symptom Sense
         </h1>
       </header>
-        <div className="flex justify-between items-center mb-4">
-  <div className="flex space-x-2">
-    <button
-      className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-        activeTab === 'chat'
-          ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
-          : 'bg-gray-100 text-gray-600 hover:text-green-500'
-      }`}
-      onClick={() => setActiveTab('chat')}
-    >
-      <MessageSquareText size={18} /> Chat
-    </button>
-    <button
-      className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-        activeTab === 'history'
-          ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
-          : 'bg-gray-100 text-gray-600 hover:text-green-500'
-      }`}
-      onClick={() => {
-        handleLoadHistory();
-        setActiveTab('history');
-      }}
-    >
-      <Clock size={18} /> History
-    </button>
-  </div>
+      <div className="flex justify-between items-end -mb-px">
+        <div className="flex items-end space-x-2">
+          <button
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+              activeTab === 'chat'
+                ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+                : 'bg-gray-100 text-gray-600 hover:text-green-500'
+            }`}
+            onClick={() => setActiveTab('chat')}
+          >
+            <MessageSquareText size={18} /> Chat
+          </button>
+          <button
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+              activeTab === 'history'
+                ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+                : 'bg-gray-100 text-gray-600 hover:text-green-500'
+            }`}
+            onClick={() => {
+              handleLoadHistory();
+              setActiveTab('history');
+            }}
+          >
+            <Clock size={18} /> History
+          </button>
+        </div>
 
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-700 font-medium">Past Context</span>
-      <button
-        onClick={() => setUseHistoryContext(!useHistoryContext)}
-        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
-          useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
-        }`}
-      >
-        <div
-          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-            useHistoryContext ? 'translate-x-6' : 'translate-x-0'
-          }`}
-        ></div>
-      </button>
-    </div>
-  </div>
+        <div className="flex flex-col items-end gap-3">
+          <button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to log out?')) {
+                handleLogout();
+              }
+            }}
+            className="text-xs text-gray-500 border border-gray-300 px-2 py-1 rounded hover:text-red-500 hover:border-red-500 transition"
+          >
+            Logout
+          </button>
+          <div className="flex items-center gap-2 -mt-1">
+            <span className="text-sm text-gray-700 font-medium">Past Context</span>
+            <button
+              onClick={() => setUseHistoryContext(!useHistoryContext)}
+              className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
+                useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
+              }`}
+            >
+              <div
+                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+                  useHistoryContext ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              ></div>
+            </button>
+          </div>
+        </div>
+      </div>
         <motion.div
           layout
           transition={{ duration: 0.4, type: 'spring' }}
