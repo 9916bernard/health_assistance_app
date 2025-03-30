@@ -276,50 +276,54 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-100 p-4 md:p-10">
       <div className="max-w-4xl mx-auto relative">
-        <header className="flex justify-between items-center mb-4">
+      <header className="flex justify-center items-center mb-6">
+        <h1 className="text-4xl font-extrabold text-center text-amber-600 font-Cosmic Sans MS tracking-wide">
+          Symptom Sense
+        </h1>
+      </header>
+        <div className="flex justify-between items-center mb-4">
+  <div className="flex space-x-2">
+    <button
+      className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+        activeTab === 'chat'
+          ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
+          : 'bg-gray-100 text-gray-600 hover:text-blue-500'
+      }`}
+      onClick={() => setActiveTab('chat')}
+    >
+      <MessageSquareText size={18} /> Chat
+    </button>
+    <button
+      className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+        activeTab === 'history'
+          ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
+          : 'bg-gray-100 text-gray-600 hover:text-blue-500'
+      }`}
+      onClick={() => {
+        handleLoadHistory();
+        setActiveTab('history');
+      }}
+    >
+      <Clock size={18} /> History
+    </button>
+  </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Health Assistant</h1>
-
-          <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition">
-            <LogOut size={24} />
-          </button>
-        </header>
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            type="checkbox"
-            checked={useHistoryContext}
-            onChange={() => setUseHistoryContext(!useHistoryContext)}
-          />
-          <label className="text-sm text-gray-700">
-            Include past diagnoses in response
-          </label>
-        </div>
-        <div className="flex space-x-2 mb-4">
-          <button
-            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-              activeTab === 'chat'
-                ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
-                : 'bg-gray-100 text-gray-600 hover:text-blue-500'
-            }`}
-            onClick={() => setActiveTab('chat')}
-          >
-            <MessageSquareText size={18} /> Chat
-          </button>
-          <button
-            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-              activeTab === 'history'
-                ? 'bg-white border-x border-t border-gray-300 text-blue-600 font-semibold'
-                : 'bg-gray-100 text-gray-600 hover:text-blue-500'
-            }`}
-            onClick={() => {
-              handleLoadHistory();
-              setActiveTab('history');
-            }}
-          >
-            <Clock size={18} /> History
-          </button>
-        </div>
-
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-gray-700 font-medium">Past Context</span>
+      <button
+        onClick={() => setUseHistoryContext(!useHistoryContext)}
+        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
+          useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
+        }`}
+      >
+        <div
+          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+            useHistoryContext ? 'translate-x-6' : 'translate-x-0'
+          }`}
+        ></div>
+      </button>
+    </div>
+  </div>
         <motion.div
           layout
           transition={{ duration: 0.4, type: 'spring' }}
@@ -337,13 +341,13 @@ export default function Dashboard() {
                 <textarea
                   className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
                   rows={4}
-                  placeholder="Describe your symptoms as specific as possible..."
+                  placeholder="Describe your symptoms!"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                 />
 
                 <button
-                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+                  className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition disabled:opacity-60"
                   onClick={handleGenerate}
                   disabled={loading}
                 >
@@ -391,7 +395,7 @@ export default function Dashboard() {
                       </div>
                       <button
                         onClick={handleShowClinicMap}
-                        className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
+                        className="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-600 transition"
                       >
                         Find Nearby Hospitals
                       </button>
@@ -440,7 +444,7 @@ export default function Dashboard() {
                       <p className="mt-2">{parsedResponse.recommendedMedication}</p>
                       <button
                         onClick={handleMedicationDetail}
-                        className="mt-2 w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition"
+                        className="mt-2 w-full bg-orange-600 text-white py-2 rounded hover:bg-purple-700 transition"
                       >
                         Medication Details
                       </button>
