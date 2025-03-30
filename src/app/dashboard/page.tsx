@@ -11,6 +11,13 @@ export default function Dashboard() {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingHospitals, setLoadingHospitals] = useState(false);
+  const [mode, setMode] = useState<'easy' | 'expert'>('easy');
+  const [hospitals, setHospitals] = useState<any[]>([]);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
@@ -21,6 +28,21 @@ export default function Dashboard() {
       router.replace('/signin');
     } else {
       setAuthorized(true);
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+        },
+        (err) => {
+          console.error('Location error:', err);
+          setUserLocation(null);
+        }
+      );
     }
   }, [router]);
 
@@ -38,7 +60,7 @@ export default function Dashboard() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, mode }),
       });
 
       const data = await res.json();
@@ -48,6 +70,41 @@ export default function Dashboard() {
       setResponse('Error generating response.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFindHospitals = async () => {
+    if (!prompt.trim()) return;
+    if (!userLocation) {
+      setResponse('Please allow location access to find hospitals.');
+      return;
+    }
+    setLoadingHospitals(true);
+    setHospitals([]);
+
+    try {
+      const res = await fetch('/api/nearbyHospital', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          symptom: prompt,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        setResponse(data.error);
+      } else {
+        setHospitals(data.hospitals || []);
+        setResponse(`Hospitals near you (${data.userAddress}):`);
+      }
+    } catch (err) {
+      console.error('Hospital fetch error:', err);
+      setResponse('Error fetching hospital info.');
+    } finally {
+      setLoadingHospitals(false);
     }
   };
 
@@ -151,10 +208,36 @@ export default function Dashboard() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
               >
+                <div className="mb-4 flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Vocabulary Level:</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setMode('easy')}
+                      className={`px-4 py-1 rounded-full text-sm border transition ${
+                        mode === 'easy'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      Easy
+                    </button>
+                    <button
+                      onClick={() => setMode('expert')}
+                      className={`px-4 py-1 rounded-full text-sm border transition ${
+                        mode === 'expert'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      Expert
+                    </button>
+                  </div>
+                </div>
+
                 <textarea
                   className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
                   rows={4}
-                  placeholder="Type your prompt..."
+                  placeholder="Describe your symptoms..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                 />
@@ -164,15 +247,42 @@ export default function Dashboard() {
                   onClick={handleGenerate}
                   disabled={loading}
                 >
-                  {loading ? 'Loading...' : 'Submit'}
+                  {loading ? 'Analyzing...' : 'Get Health Report'}
+                </button>
+
+                <button
+                  className="w-full mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition disabled:opacity-60"
+                  onClick={handleFindHospitals}
+                  disabled={loadingHospitals}
+                >
+                  {loadingHospitals ? 'Searching...' : 'Find Nearby Hospitals'}
                 </button>
 
                 <div className="mt-4">
                   <h2 className="font-medium text-gray-700 mb-1">Response:</h2>
                   <div className="p-3 border rounded bg-gray-50 text-sm whitespace-pre-wrap min-h-[80px]">
-                    {loading ? 'Thinking...' : response || 'No response yet.'}
+                    {loading || loadingHospitals
+                      ? 'Processing...'
+                      : response || 'No response yet.'}
                   </div>
                 </div>
+
+                {hospitals.length > 0 && (
+                  <div className="mt-6">
+                    <h2 className="text-lg font-semibold text-green-700 mb-2">Nearby Hospitals:</h2>
+                    <ul className="space-y-4">
+                      {hospitals.map((h: any) => (
+                        <li
+                          key={h.place_id}
+                          className="p-4 bg-green-50 border border-green-200 rounded-md"
+                        >
+                          <h3 className="text-sm font-bold text-green-700">{h.name}</h3>
+                          <p className="text-sm text-gray-600">{h.address}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -187,10 +297,7 @@ export default function Dashboard() {
                 <h2 className="font-medium text-gray-700 mb-1">Chat History:</h2>
                 <div className="max-h-64 overflow-y-auto space-y-2 text-sm">
                   {history.map((msg) => (
-                    <div
-                      key={msg._id}
-                      className="p-4 border rounded bg-gray-50 space-y-1"
-                    >
+                    <div key={msg._id} className="p-4 border rounded bg-gray-50 space-y-1">
                       <p><strong>User:</strong> {msg.prompt}</p>
                       <p><strong>Gemini:</strong> {msg.response}</p>
                       <p className="text-xs text-gray-500">
