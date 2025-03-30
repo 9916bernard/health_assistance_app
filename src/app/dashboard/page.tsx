@@ -7,6 +7,7 @@ import symtomsenseLogo from '/public/symtomsense.png';
 import { LogOut, MessageSquareText, Clock } from 'lucide-react';
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 import { AnimatePresence, motion } from 'framer-motion';
+import SpeechToText from '@/components/SpeechToText';
 
 // Map container styles
 const mapContainerStyle = {
@@ -355,13 +356,16 @@ export default function Dashboard() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
               >
-                <textarea
-                  className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
-                  rows={4}
-                  placeholder="Describe your symptoms!"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                />
+                <div className="flex items-center gap-2 mb-3">
+                  <textarea
+                    className="w-full p-3 border rounded text-black focus:ring-2 focus:ring-blue-500"
+                    rows={4}
+                    placeholder="Describe your symptoms!"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                  />
+                  <SpeechToText onResult={(text) => setPrompt(text)} />
+                </div>
 
                 <button
                   className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition disabled:opacity-60"
