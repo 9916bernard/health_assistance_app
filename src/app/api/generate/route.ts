@@ -108,21 +108,39 @@ export async function POST(req: Request) {
         console.error("openFDA fetch error:", fdaErr);
       }
     }
+    function extractFieldsFromText(text: string) {
+      const lines = text.split("\n").map((line) => line.trim());
+      let urgencyScore = "";
+      let mostLikelyCondition = "";
+    
+      for (const line of lines) {
+        if (line.startsWith("Urgency Score")) {
+          urgencyScore = line.split(":")[1]?.trim() || "";
+        }
+        if (line.startsWith("Most Likely Condition")) {
+          mostLikelyCondition = line.split(":")[1]?.trim() || "";
+        }
+      }
+    
+      return { urgencyScore, mostLikelyCondition };
+    }
+
+    const { urgencyScore, mostLikelyCondition } = extractFieldsFromText(text);
 
     const client = await clientPromise;
     const db = client.db("health-assistant");
     const collection = db.collection("health-data");
 
-    const result = await collection.insertOne({
+    await collection.insertOne({
       username,
       prompt,
       response: text,
-      otcName,
       timestamp: new Date(),
       category,
+      urgencyScore,
+      mostLikelyCondition,
     });
 
-    console.log("Saved to DB:", result.insertedId);
     return NextResponse.json({ text: text + fdaInfo });
   } catch (error) {
     console.error("Server error:", error);
