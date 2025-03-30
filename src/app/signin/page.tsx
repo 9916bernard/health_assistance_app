@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+import symtomsenseLogo from '/public/symtomsense.png';
 
 export default function SigninPage() {
   const router = useRouter();
@@ -23,25 +25,34 @@ export default function SigninPage() {
     const data = await res.json();
   
     if (res.ok) {
-      localStorage.removeItem('userEmail');         // ✅ 기존 사용자 제거
-      localStorage.setItem('token', data.token);    // ✅ 토큰 저장
-      localStorage.setItem('userEmail', email);     // ✅ 새 사용자 저장
-      router.push('/dashboard');                    // ✅ 이동
+      localStorage.removeItem('userEmail');
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userEmail', email);
+      router.push('/dashboard');
     } else {
       setError(data.error || 'Signin failed');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-green-100 p-6">
-      {/* 모션으로 감싸서 등장 애니메이션 추가 */}
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-green-100 p-6">
+      {/* 상단에 이미지 배치 */}
+      <Image
+        src={symtomsenseLogo}
+        alt="Symptom Sense"
+        width={450}
+        height={450}
+        className="mb-4"
+      />
+
+      {/* 중앙에 위치하는 로그인 카드 */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-md bg-white/90 backdrop-blur p-8 rounded-lg shadow-lg"
       >
-        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800">
+        <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">
           Sign In
         </h2>
 

@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+import symtomsenseLogo from '/public/symtomsense.png';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -24,7 +26,7 @@ export default function SignupPage() {
     const data = await res.json();
     if (res.ok) {
       setSuccess(true);
-      // 3초 후 자동으로 로그인 페이지로 이동 (선택 사항)
+      // 3초 후 자동으로 로그인 페이지로 이동
       setTimeout(() => {
         router.push('/signin');
       }, 3000);
@@ -34,14 +36,24 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-green-100 p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-green-100 p-6">
+      {/* 상단에 이미지 배치 */}
+      <Image
+        src={symtomsenseLogo}
+        alt="Symptom Sense"
+        width={450}
+        height={450}
+        className="mb-4"
+      />
+
+      {/* 중앙에 위치하는 회원가입 카드 */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-md bg-white/90 backdrop-blur p-8 rounded-lg shadow-lg"
       >
-        <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
+        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
           Create Account
         </h2>
 
