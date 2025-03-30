@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     
     const body = await req.json();
     const { prompt, username , useHistoryContext } = body;
-    console.log("Incoming request:", { prompt, username });
+    console.log("Incoming request:", useHistoryContext ? { prompt, username, useHistoryContext }: { prompt, username});
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
