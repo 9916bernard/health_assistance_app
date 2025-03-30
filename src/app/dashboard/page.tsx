@@ -362,9 +362,9 @@ export default function Dashboard() {
                         <svg width="200" height="100" viewBox="0 0 200 100">
                           <defs>
                             <linearGradient id="urgencyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stop-color="#facc15" />  {/* yellow-000 */}
-                              <stop offset="50%" stop-color="#f97316" /> {/* orange-500 */}
-                              <stop offset="100%" stop-color="#ef4444" /> {/* red-900 */}
+                              <stop offset="0%" stopColor="#facc15" />  {/* yellow-000 */}
+                              <stop offset="50%" stopColor="#f97316" /> {/* orange-500 */}
+                              <stop offset="100%" stopColor="#ef4444" /> {/* red-900 */}
                             </linearGradient>
                           </defs>
                           <path
