@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         historyContext = past
           .map(
             (p, idx) =>
-              `Previous Diagnosis ${idx + 1}:\n- Symptoms: ${p.prompt}\n- Diagnosis: ${p.response}`
+              `- Previous UrgencyScore: ${p.urgencyScore}\n`
           )
           .join('\n\n');
       }
