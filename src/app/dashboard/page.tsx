@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import symtomsenseLogo from '/public/symtomsense.png';
 import { LogOut, MessageSquareText, Clock } from 'lucide-react';
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -51,9 +53,9 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userEmail = localStorage.getItem('userEmail');
-  
+
     if (!token || !userEmail) {
-      router.replace('/signin'); // ✅ 로그인 안 되어 있으면 로그인 페이지로
+      router.replace('/signin'); // 로그인 안 되어 있으면 signin 페이지로 이동
     } else {
       setAuthorized(true);
     }
@@ -83,16 +85,16 @@ export default function Dashboard() {
       whatYouCanDoNow: '',
     };
     lines.forEach((line) => {
-      if (line.startsWith("Urgency Score")) {
-        parsed.urgencyScore = line.split(":")[1]?.trim() || '';
-      } else if (line.startsWith("Most Likely Condition")) {
-        parsed.mostLikelyCondition = line.split(":")[1]?.trim() || '';
-      } else if (line.startsWith("Recommended Clinic")) {
-        parsed.recommendedClinic = line.split(":")[1]?.trim() || '';
-      } else if (line.startsWith("Recommanded Medication")) {
-        parsed.recommendedMedication = line.split(":")[1]?.trim() || '';
-      } else if (line.startsWith("What You Can Do Now")) {
-        parsed.whatYouCanDoNow = line.split(":")[1]?.trim() || '';
+      if (line.startsWith('Urgency Score')) {
+        parsed.urgencyScore = line.split(':')[1]?.trim() || '';
+      } else if (line.startsWith('Most Likely Condition')) {
+        parsed.mostLikelyCondition = line.split(':')[1]?.trim() || '';
+      } else if (line.startsWith('Recommended Clinic')) {
+        parsed.recommendedClinic = line.split(':')[1]?.trim() || '';
+      } else if (line.startsWith('Recommanded Medication')) {
+        parsed.recommendedMedication = line.split(':')[1]?.trim() || '';
+      } else if (line.startsWith('What You Can Do Now')) {
+        parsed.whatYouCanDoNow = line.split(':')[1]?.trim() || '';
       }
     });
     return parsed;
@@ -100,7 +102,7 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('userEmail'); // 👈 이게 누락되면 문제 생김
+    localStorage.removeItem('userEmail');
     router.push('/signin');
   };
 
@@ -127,17 +129,17 @@ export default function Dashboard() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, username, useHistoryContext }), // ✅ 포함!
+        body: JSON.stringify({ prompt, username, useHistoryContext }),
       });
       const data = await res.json();
       let fullText = data.text || 'No response received.';
       let mainText = fullText;
       let fdaInfo = '';
-      const marker = "💊 Drug Info";
+      const marker = '💊 Drug Info';
       if (fullText.includes(marker)) {
-         const parts = fullText.split(marker);
-         mainText = parts[0].trim();
-         fdaInfo = marker + parts[1].trim();
+        const parts = fullText.split(marker);
+        mainText = parts[0].trim();
+        fdaInfo = marker + parts[1].trim();
       }
       setRawResponse(mainText);
       setMedicationFdaInfo(fdaInfo);
@@ -195,7 +197,7 @@ export default function Dashboard() {
       const res = await fetch('/api/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }), // ✅ 사용자 email 포함해서 요청
+        body: JSON.stringify({ username }),
       });
   
       const data = await res.json();
@@ -235,14 +237,11 @@ export default function Dashboard() {
     if (!username) return;
 
     try {
-
       const res = await fetch('/api/history', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       });
-
-
       const data = await res.json();
       if (res.ok) {
         setHistory([]);
@@ -256,90 +255,96 @@ export default function Dashboard() {
     }
   };
 
-  // "Find Nearby Hospitals" 버튼은 지도 표시를 위해 토글합니다.
   const handleShowClinicMap = () => {
     handleFindHospitals();
     setClinicMapVisible((prev) => !prev);
   };
 
-  // Medication Details 버튼 클릭 시 openFDA 정보 토글
   const handleMedicationDetail = () => {
     setMedicationDetailVisible((prev) => !prev);
   };
 
   if (!authorized || !isLoaded) return null;
 
-  // Urgency Score 항상 숫자가 표시되도록 기본값 처리
   const urgencyValue = parseInt(parsedResponse.urgencyScore) || 0;
-  const urgencyBarWidth = `${(urgencyValue / 10) * 100}%`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-100 p-4 md:p-10">
       <div className="max-w-4xl mx-auto relative">
-      <header className="flex justify-center items-center mb-6">
-        <h1 className="text-4xl font-extrabold text-center text-amber-600 font-Cosmic Sans MS tracking-wide">
-          Symptom Sense
-        </h1>
-      </header>
-      <div className="flex justify-between items-end -mb-px">
-        <div className="flex items-end space-x-2">
-          <button
-            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-              activeTab === 'chat'
-                ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
-                : 'bg-gray-100 text-gray-600 hover:text-green-500'
-            }`}
-            onClick={() => setActiveTab('chat')}
-          >
-            <MessageSquareText size={18} /> Chat
-          </button>
-          <button
-            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-              activeTab === 'history'
-                ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
-                : 'bg-gray-100 text-gray-600 hover:text-green-500'
-            }`}
-            onClick={() => {
-              handleLoadHistory();
-              setActiveTab('history');
-            }}
-          >
-            <Clock size={18} /> History
-          </button>
-        </div>
 
-        <div className="flex flex-col items-end gap-3">
-          <button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to log out?')) {
-                handleLogout();
-              }
-            }}
-            className="text-xs text-gray-500 border border-gray-300 px-2 py-1 rounded hover:text-red-500 hover:border-red-500 transition"
-          >
-            Logout
-          </button>
-          <div className="flex items-center gap-2 -mt-1">
-            <span className="text-sm text-gray-700 font-medium">Past Context</span>
+        {/* 헤더 영역: 이미지 + 제목 + 오른쪽 위 로그아웃 아이콘 */}
+        <header className="relative flex flex-col items-center mb-6 px-6 py-6">
+          <div className="absolute top-45 right-0">
             <button
-              onClick={() => setUseHistoryContext(!useHistoryContext)}
-              className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
-                useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
-              }`}
+              onClick={() => {
+                if (window.confirm('Are you sure you want to log out?')) {
+                  handleLogout();
+                }
+              }}
+              className="p-2 text-gray-600 hover:text-red-500"
             >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-                  useHistoryContext ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              ></div>
+              <LogOut size={24} />
             </button>
           </div>
+          <Image
+            src={symtomsenseLogo}
+            alt="Symptom Sense"
+            width={470}
+            height={470}
+            className="mb-2"
+          />
+        </header>
+
+        <div className="flex justify-between items-end -mb-px px-6">
+          <div className="flex items-end space-x-2">
+            <button
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+                activeTab === 'chat'
+                  ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:text-green-500'
+              }`}
+              onClick={() => setActiveTab('chat')}
+            >
+              <MessageSquareText size={18} /> Chat
+            </button>
+            <button
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+                activeTab === 'history'
+                  ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:text-green-500'
+              }`}
+              onClick={() => {
+                handleLoadHistory();
+                setActiveTab('history');
+              }}
+            >
+              <Clock size={18} /> History
+            </button>
+          </div>
+
+          <div className="flex flex-col items-end gap-3 px-6">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700 font-medium">Include Past Symptom</span>
+              <button
+                onClick={() => setUseHistoryContext(!useHistoryContext)}
+                className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
+                  useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+                    useHistoryContext ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                ></div>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+
         <motion.div
           layout
           transition={{ duration: 0.4, type: 'spring' }}
-          className="bg-white shadow-lg rounded-b-2xl rounded-tr-2xl p-6 border border-gray-200"
+          className="bg-white shadow-lg rounded-b-2xl rounded-tr-2xl p-6 border border-gray-200 mt-4"
         >
           <AnimatePresence mode="wait">
             {activeTab === 'chat' && (
@@ -374,9 +379,9 @@ export default function Dashboard() {
                         <svg width="200" height="100" viewBox="0 0 200 100">
                           <defs>
                             <linearGradient id="urgencyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#facc15" />  {/* yellow-000 */}
-                              <stop offset="50%" stopColor="#f97316" /> {/* orange-500 */}
-                              <stop offset="100%" stopColor="#ef4444" /> {/* red-900 */}
+                              <stop offset="0%" stopColor="#facc15" />
+                              <stop offset="50%" stopColor="#f97316" />
+                              <stop offset="100%" stopColor="#ef4444" />
                             </linearGradient>
                           </defs>
                           <path
@@ -392,14 +397,14 @@ export default function Dashboard() {
                             y2="20"
                             stroke="black"
                             strokeWidth="2"
-                            transform={`rotate(${(urgencyValue - 5) * 18} 100 100)`} // max 180° / 10단계
+                            transform={`rotate(${(urgencyValue - 5) * 18} 100 100)`}
                           />
                           <circle
                             cx="100"
                             cy="100"
                             r="5"
                             fill="black"
-                            transform={`rotate(${(urgencyValue - 1) * 18} 100 100)`} // max 180° / 10단계
+                            transform={`rotate(${(urgencyValue - 1) * 18} 100 100)`}
                           />
                         </svg>
                         <span className="mt-2 text-xl font-bold text-gray-800">{urgencyValue}/10</span>
@@ -417,13 +422,13 @@ export default function Dashboard() {
                       <p className="text-2xl font-bold mt-2 text-center">{parsedResponse.mostLikelyCondition}</p>
                     </div>
 
-                    {/* 3. What You Can Do Now (전체 가로 사용) */}
+                    {/* What You Can Do Now */}
                     <div className="bg-white shadow p-4 rounded col-span-1 md:col-span-2">
                       <h2 className="text-lg font-semibold mb-2">What You Can Do Now</h2>
                       <p>{parsedResponse.whatYouCanDoNow}</p>
                     </div>
 
-                    {/* 4. Clinics & Hospitals */}
+                    {/* Clinics & Hospitals */}
                     <div className="bg-white shadow p-4 rounded">
                       <h2 className="text-lg font-semibold mb-2">Clinics &amp; Hospitals</h2>
                       <div className="mb-3">
@@ -477,7 +482,7 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    {/* 5. Medication Recommendation */}
+                    {/* Medication Recommendation */}
                     <div className="bg-white shadow p-4 rounded">
                       <h2 className="text-lg font-semibold mb-2">Medication Recommendation</h2>
                       <p className="mt-2">{parsedResponse.recommendedMedication}</p>
