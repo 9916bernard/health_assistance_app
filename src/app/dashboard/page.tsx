@@ -12,7 +12,6 @@ export default function Dashboard() {
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
-  const [mode, setMode] = useState<'easy' | 'expert'>('easy');
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
@@ -53,6 +52,13 @@ export default function Dashboard() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
+
+    const username = localStorage.getItem('userEmail');
+    if (!username) {
+      setResponse('Error: No username found.');
+      return;
+    }
+
     setLoading(true);
     setResponse('');
 
@@ -60,7 +66,7 @@ export default function Dashboard() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, mode }),
+        body: JSON.stringify({ prompt, username }),
       });
 
       const data = await res.json();
@@ -79,6 +85,7 @@ export default function Dashboard() {
       setResponse('Please allow location access to find hospitals.');
       return;
     }
+
     setLoadingHospitals(true);
     setHospitals([]);
 
@@ -109,8 +116,15 @@ export default function Dashboard() {
   };
 
   const handleLoadHistory = async () => {
+    const username = localStorage.getItem('userEmail');
+    if (!username) return;
+
     try {
-      const res = await fetch('/api/history');
+      const res = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
       const data = await res.json();
       setHistory(data.messages || []);
       setShowHistory(true);
@@ -120,11 +134,18 @@ export default function Dashboard() {
   };
 
   const handleDeleteOne = async (id: string) => {
+    const username = localStorage.getItem('userEmail');
+    if (!username) return;
+
     const confirmDelete = window.confirm('Delete this message?');
     if (!confirmDelete) return;
 
     try {
-      const res = await fetch(`/api/history/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/history/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
       const data = await res.json();
 
       if (res.ok && data.success) {
@@ -139,15 +160,21 @@ export default function Dashboard() {
   };
 
   const handleDeleteHistory = async () => {
-    try {
-      const res = await fetch('/api/history', { method: 'DELETE' });
-      const data = await res.json();
+    const username = localStorage.getItem('userEmail');
+    if (!username) return;
 
+    try {
+      const res = await fetch('/api/history', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+
+      const data = await res.json();
       if (res.ok) {
         setHistory([]);
         alert(`Deleted ${data.deletedCount} entries.`);
       } else {
-        console.error('Failed to delete:', data);
         alert('Failed to delete history.');
       }
     } catch (err) {
@@ -162,7 +189,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-b from-white to-green-100 p-4 md:p-10">
       <div className="max-w-2xl mx-auto relative">
         <header className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Gemini Prompt</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Health Assistant</h1>
           <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition">
             <LogOut size={24} />
           </button>
@@ -208,32 +235,6 @@ export default function Dashboard() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="mb-4 flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Vocabulary Level:</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setMode('easy')}
-                      className={`px-4 py-1 rounded-full text-sm border transition ${
-                        mode === 'easy'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'
-                      }`}
-                    >
-                      Easy
-                    </button>
-                    <button
-                      onClick={() => setMode('expert')}
-                      className={`px-4 py-1 rounded-full text-sm border transition ${
-                        mode === 'expert'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'
-                      }`}
-                    >
-                      Expert
-                    </button>
-                  </div>
-                </div>
-
                 <textarea
                   className="w-full p-3 border rounded text-black mb-3 focus:ring-2 focus:ring-blue-500"
                   rows={4}

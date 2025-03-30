@@ -24,13 +24,16 @@ If the user types something unrelated to symptoms, reply:
 
 export async function POST(req: Request) {
   try {
-    const { prompt, fdaQuery } = await req.json();
+    const body = await req.json();
+    const { prompt, username } = body;
+    console.log("Incoming request:", { prompt, username });
 
     if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json(
-        { error: "Prompt is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    }
+
+    if (!username || typeof username !== "string") {
+      return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
 
     const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
@@ -41,67 +44,37 @@ export async function POST(req: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: fullPrompt }],
-            },
-          ],
+          contents: [{ parts: [{ text: fullPrompt }] }],
         }),
       }
     );
-    const category = categorizeQuestion(prompt);
-
 
     if (!response.ok) {
       const err = await response.json();
       console.error("Gemini API error:", err);
-      return NextResponse.json(
-        { error: "Gemini API Error", details: err },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Gemini API error", details: err }, { status: 500 });
     }
 
     const data = await response.json();
-    const text =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from Gemini.";
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+    const category = categorizeQuestion(prompt);
 
-    let fdaData = null;
-    if (fdaQuery && typeof fdaQuery === "string") {
-      try {
-        const fdaRes = await fetch(`https://api.fda.gov/${fdaQuery}`);
-        if (fdaRes.ok) {
-          fdaData = await fdaRes.json();
-        } else {
-          const err = await fdaRes.json();
-          console.error("openFDA API error:", err);
-          fdaData = { error: "openFDA API Error", details: err };
-        }
-      } catch (fdaErr) {
-        console.error("openFDA fetch error:", fdaErr);
-        fdaData = { error: "Failed to fetch openFDA data" };
-      }
-    }
-
-    // ✅ MongoDB에 저장
     const client = await clientPromise;
-    // select collection named after the category
     const db = client.db("health-assistant");
-    const collection = db.collection(category); // e.g., "Orthopedics", "General"
+    const collection = db.collection("health-data");
 
-    await collection.insertOne({
+    const result = await collection.insertOne({
+      username,
       prompt,
       response: text,
       timestamp: new Date(),
-      category, // optional but nice to keep
+      category,
     });
 
+    console.log("Saved to DB:", result.insertedId);
     return NextResponse.json({ text });
   } catch (error) {
     console.error("Server error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
