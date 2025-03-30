@@ -26,7 +26,10 @@ export async function POST(req: Request) {
     const { prompt } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Prompt is required" },
+        { status: 400 }
+      );
     }
 
     // ✅ 시스템 프롬프트와 유저 프롬프트를 합치기
@@ -41,9 +44,9 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text: fullPrompt }]
-            }
-          ]
+              parts: [{ text: fullPrompt }],
+            },
+          ],
         }),
       }
     );
@@ -51,11 +54,16 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const err = await response.json();
       console.error("Gemini API error:", err);
-      return NextResponse.json({ error: "Gemini API Error", details: err }, { status: 500 });
+      return NextResponse.json(
+        { error: "Gemini API Error", details: err },
+        { status: 500 }
+      );
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+    const text =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "No response from Gemini.";
 
     // ✅ MongoDB에 저장
     const client = await clientPromise;
@@ -71,6 +79,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ text });
   } catch (error) {
     console.error("Server error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
