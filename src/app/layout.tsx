@@ -59,8 +59,11 @@ const geistMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Health Assistant App",
-  description: "An AI health assistant powered by Gemini + MongoDB",
+
+  title: 'SymptomSense',
+  description: 'An AI health assistant powered by Gemini + MongoDB',
+
+
 };
 
 export default function RootLayout({

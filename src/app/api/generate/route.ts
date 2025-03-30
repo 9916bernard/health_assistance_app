@@ -16,8 +16,7 @@ Recommended Clinic: ...
 Recommanded Medication: <Comma-separated list of real medicine brand names only, no descriptions>
 What You Can Do Now: ...
 
-If the user types something unrelated to symptoms, reply:
-"I am a health support assistant. Please tell me about any pain or symptoms you're feeling, and I will try to help."
+If Urgency Scores are given in prompt, give same or higher urgency score. But do not mention this in response.
 `;
 
 export async function POST(req: Request) {
@@ -25,15 +24,6 @@ export async function POST(req: Request) {
     
     const body = await req.json();
     const { prompt, username , useHistoryContext } = body;
-    console.log("Incoming request:", { prompt, username });
-
-    if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
-    }
-    if (!username || typeof username !== "string") {
-      return NextResponse.json({ error: "Username is required" }, { status: 400 });
-    }
-
     let historyContext = '';
     if (useHistoryContext) {
       const client = await clientPromise;
@@ -45,16 +35,25 @@ export async function POST(req: Request) {
         .sort({ timestamp: -1 })
         .limit(3) // 최근 3개만 사용
         .toArray();
-
-      if (past.length > 0) {
-        historyContext = past
-          .map(
-            (p, idx) =>
-              `Previous Diagnosis ${idx + 1}:\n- Symptoms: ${p.prompt}\n- Diagnosis: ${p.response}`
-          )
-          .join('\n\n');
-      }
+        if (past.length > 0) {
+          historyContext = past
+            .map((p, idx) => {
+              const score = p.urgencyScore || 'N/A';
+              return `Previous Diagnosis ${idx + 1}:\n- Urgency Score: ${score}`;
+            })
+            .join('\n\n');
+        }
     }
+    console.log("Incoming request:", useHistoryContext ? { prompt, username, historyContext }: { prompt, username});
+
+    if (!prompt || typeof prompt !== "string") {
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    }
+    if (!username || typeof username !== "string") {
+      return NextResponse.json({ error: "Username is required" }, { status: 400 });
+    }
+
+
     const fullPrompt = `${SYSTEM_PROMPT}\n\n${
       historyContext ? historyContext + '\n\n' : ''
     }User input: ${prompt}`;
@@ -108,21 +107,39 @@ export async function POST(req: Request) {
         console.error("openFDA fetch error:", fdaErr);
       }
     }
+    function extractFieldsFromText(text: string) {
+      const lines = text.split("\n").map((line) => line.trim());
+      let urgencyScore = "";
+      let mostLikelyCondition = "";
+    
+      for (const line of lines) {
+        if (line.startsWith("Urgency Score")) {
+          urgencyScore = line.split(":")[1]?.trim() || "";
+        }
+        if (line.startsWith("Most Likely Condition")) {
+          mostLikelyCondition = line.split(":")[1]?.trim() || "";
+        }
+      }
+    
+      return { urgencyScore, mostLikelyCondition };
+    }
+
+    const { urgencyScore, mostLikelyCondition } = extractFieldsFromText(text);
 
     const client = await clientPromise;
     const db = client.db("health-assistant");
     const collection = db.collection("health-data");
 
-    const result = await collection.insertOne({
+    await collection.insertOne({
       username,
       prompt,
       response: text,
-      otcName,
       timestamp: new Date(),
       category,
+      urgencyScore,
+      mostLikelyCondition,
     });
 
-    console.log("Saved to DB:", result.insertedId);
     return NextResponse.json({ text: text + fdaInfo });
   } catch (error) {
     console.error("Server error:", error);
