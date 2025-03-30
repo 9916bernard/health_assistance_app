@@ -29,7 +29,6 @@ export async function POST(req: Request) {
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
-
     if (!username || typeof username !== "string") {
       return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
@@ -49,7 +48,6 @@ export async function POST(req: Request) {
 
     const category = categorizeQuestion(prompt);
 
-
     if (!response.ok) {
       const err = await response.json();
       console.error("Gemini API error:", err);
@@ -57,19 +55,9 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json();
-
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
-    const category = categorizeQuestion(prompt);
 
-    const client = await clientPromise;
-    const db = client.db("health-assistant");
-    const collection = db.collection("health-data");
-
-    const result = await collection.insertOne({
-      username,
-
-
-    // openFDA: 추출한 OTC Medication 이름으로 검색
+    // OTC Medication 이름 추출
     const otcMatch = text.match(/Recommanded Medication:\s*(.+)/i);
     const otcName = otcMatch?.[1]?.split(",")[0].trim();
 
@@ -77,9 +65,7 @@ export async function POST(req: Request) {
     if (otcName) {
       try {
         const fdaRes = await fetch(
-          `https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodeURIComponent(
-            otcName
-          )}"`
+          `https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodeURIComponent(otcName)}"`
         );
         if (fdaRes.ok) {
           const fdaJson = await fdaRes.json();
@@ -99,12 +85,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // MongoDB에 저장
     const client = await clientPromise;
     const db = client.db("health-assistant");
-    const collection = db.collection(category);
-    await collection.insertOne({
+    const collection = db.collection("health-data");
 
+    const result = await collection.insertOne({
+      username,
       prompt,
       response: text,
       otcName,
@@ -112,10 +98,8 @@ export async function POST(req: Request) {
       category,
     });
 
-
-    return NextResponse.json({ text });
-
-
+    console.log("Saved to DB:", result.insertedId);
+    return NextResponse.json({ text: text + fdaInfo });
   } catch (error) {
     console.error("Server error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

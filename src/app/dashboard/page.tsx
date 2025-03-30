@@ -108,7 +108,7 @@ export default function Dashboard() {
 
     const username = localStorage.getItem('userEmail');
     if (!username) {
-      setResponse('Error: No username found.');
+      setRawResponse('Error: No username found.');
       return;
     }
 
