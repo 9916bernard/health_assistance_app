@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [authorized, setAuthorized] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [rawResponse, setRawResponse] = useState('');
+  const [useHistoryContext, setUseHistoryContext] = useState(false);
   const [parsedResponse, setParsedResponse] = useState({
     urgencyScore: '',
     mostLikelyCondition: '',
@@ -33,7 +34,6 @@ export default function Dashboard() {
   const [medicationFdaInfo, setMedicationFdaInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
-  const [mode, setMode] = useState<'easy' | 'expert'>('easy');
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [history, setHistory] = useState<any[]>([]);
@@ -50,8 +50,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      router.replace('/signin');
+    const userEmail = localStorage.getItem('userEmail');
+  
+    if (!token || !userEmail) {
+      router.replace('/signin'); // ✅ 로그인 안 되어 있으면 로그인 페이지로
     } else {
       setAuthorized(true);
     }
@@ -98,11 +100,19 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userEmail'); // 👈 이게 누락되면 문제 생김
     router.push('/signin');
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
+
+    const username = localStorage.getItem('userEmail');
+    if (!username) {
+      setRawResponse('Error: No username found.');
+      return;
+    }
+
     setLoading(true);
     setRawResponse('');
     setMedicationFdaInfo('');
@@ -117,7 +127,7 @@ export default function Dashboard() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, mode }),
+        body: JSON.stringify({ prompt, username, useHistoryContext }), // ✅ 포함!
       });
       const data = await res.json();
       let fullText = data.text || 'No response received.';
@@ -146,6 +156,7 @@ export default function Dashboard() {
       setRawResponse('Please allow location access to find hospitals.');
       return;
     }
+
     setLoadingHospitals(true);
     setHospitals([]);
     try {
@@ -174,8 +185,19 @@ export default function Dashboard() {
   };
 
   const handleLoadHistory = async () => {
+    const username = localStorage.getItem('userEmail');
+    if (!username) {
+      alert("You're not logged in.");
+      return;
+    }
+  
     try {
-      const res = await fetch('/api/history');
+      const res = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }), // ✅ 사용자 email 포함해서 요청
+      });
+  
       const data = await res.json();
       setHistory(data.messages || []);
       setShowHistory(true);
@@ -185,10 +207,17 @@ export default function Dashboard() {
   };
 
   const handleDeleteOne = async (id: string) => {
+    const username = localStorage.getItem('userEmail');
+    if (!username) return;
+
     const confirmDelete = window.confirm('Delete this message?');
     if (!confirmDelete) return;
     try {
-      const res = await fetch(`/api/history/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/history/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
       const data = await res.json();
       if (res.ok && data.success) {
         setHistory((prev) => prev.filter((msg) => msg._id !== id));
@@ -202,14 +231,23 @@ export default function Dashboard() {
   };
 
   const handleDeleteHistory = async () => {
+    const username = localStorage.getItem('userEmail');
+    if (!username) return;
+
     try {
-      const res = await fetch('/api/history', { method: 'DELETE' });
+
+      const res = await fetch('/api/history', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+
+
       const data = await res.json();
       if (res.ok) {
         setHistory([]);
         alert(`Deleted ${data.deletedCount} entries.`);
       } else {
-        console.error('Failed to delete:', data);
         alert('Failed to delete history.');
       }
     } catch (err) {
@@ -239,12 +277,23 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-b from-white to-green-100 p-4 md:p-10">
       <div className="max-w-4xl mx-auto relative">
         <header className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Symptom Analyzer</h1>
+
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Health Assistant</h1>
+
           <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition">
             <LogOut size={24} />
           </button>
         </header>
-
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            type="checkbox"
+            checked={useHistoryContext}
+            onChange={() => setUseHistoryContext(!useHistoryContext)}
+          />
+          <label className="text-sm text-gray-700">
+            Include past diagnoses in response
+          </label>
+        </div>
         <div className="flex space-x-2 mb-4">
           <button
             className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${

@@ -22,16 +22,42 @@ If the user types something unrelated to symptoms, reply:
 
 export async function POST(req: Request) {
   try {
-    const { prompt, fdaQuery } = await req.json();
+    
+    const body = await req.json();
+    const { prompt, username , useHistoryContext } = body;
+    console.log("Incoming request:", { prompt, username });
 
     if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json(
-        { error: "Prompt is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    }
+    if (!username || typeof username !== "string") {
+      return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
 
-    const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
+    let historyContext = '';
+    if (useHistoryContext) {
+      const client = await clientPromise;
+      const db = client.db('health-assistant');
+      const collection = db.collection('health-data');
+
+      const past = await collection
+        .find({ username })
+        .sort({ timestamp: -1 })
+        .limit(3) // 최근 3개만 사용
+        .toArray();
+
+      if (past.length > 0) {
+        historyContext = past
+          .map(
+            (p, idx) =>
+              `Previous Diagnosis ${idx + 1}:\n- Symptoms: ${p.prompt}\n- Diagnosis: ${p.response}`
+          )
+          .join('\n\n');
+      }
+    }
+    const fullPrompt = `${SYSTEM_PROMPT}\n\n${
+      historyContext ? historyContext + '\n\n' : ''
+    }User input: ${prompt}`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -39,31 +65,23 @@ export async function POST(req: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: fullPrompt }],
-            },
-          ],
+          contents: [{ parts: [{ text: fullPrompt }] }],
         }),
       }
     );
+
     const category = categorizeQuestion(prompt);
 
     if (!response.ok) {
       const err = await response.json();
       console.error("Gemini API error:", err);
-      return NextResponse.json(
-        { error: "Gemini API Error", details: err },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Gemini API error", details: err }, { status: 500 });
     }
 
     const data = await response.json();
-    const text =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from Gemini.";
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
 
-    // openFDA: 추출한 OTC Medication 이름으로 검색
+    // OTC Medication 이름 추출
     const otcMatch = text.match(/Recommanded Medication:\s*(.+)/i);
     const otcName = otcMatch?.[1]?.split(",")[0].trim();
 
@@ -71,9 +89,7 @@ export async function POST(req: Request) {
     if (otcName) {
       try {
         const fdaRes = await fetch(
-          `https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodeURIComponent(
-            otcName
-          )}"`
+          `https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodeURIComponent(otcName)}"`
         );
         if (fdaRes.ok) {
           const fdaJson = await fdaRes.json();
@@ -93,11 +109,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // MongoDB에 저장
     const client = await clientPromise;
     const db = client.db("health-assistant");
-    const collection = db.collection(category);
-    await collection.insertOne({
+    const collection = db.collection("health-data");
+
+    const result = await collection.insertOne({
+      username,
       prompt,
       response: text,
       otcName,
@@ -105,13 +122,10 @@ export async function POST(req: Request) {
       category,
     });
 
-    const finalText = `${text}${fdaInfo}`;
-    return NextResponse.json({ text: finalText });
+    console.log("Saved to DB:", result.insertedId);
+    return NextResponse.json({ text: text + fdaInfo });
   } catch (error) {
     console.error("Server error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

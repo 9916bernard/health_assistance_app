@@ -1,3 +1,4 @@
+// src/app/api/history/[id]/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -7,7 +8,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
+    const { username } = await req.json();
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -16,17 +18,27 @@ export async function DELETE(
       );
     }
 
+    if (!username || typeof username !== "string") {
+      return NextResponse.json(
+        { success: false, error: "Username is required" },
+        { status: 400 }
+      );
+    }
+
     const client = await clientPromise;
     const db = client.db("health-assistant");
-    const collection = db.collection("chats");
+    const collection = db.collection("health-data");
 
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    const result = await collection.deleteOne({
+      _id: new ObjectId(id),
+      username,
+    });
 
     if (result.deletedCount === 1) {
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(
-        { success: false, error: "Message not found" },
+        { success: false, error: "Message not found or not authorized" },
         { status: 404 }
       );
     }

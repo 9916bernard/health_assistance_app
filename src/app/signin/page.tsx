@@ -13,16 +13,20 @@ export default function SigninPage() {
 
   const handleSignin = async () => {
     setError('');
+  
     const res = await fetch('/api/auth/signin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-
+  
     const data = await res.json();
+  
     if (res.ok) {
-      localStorage.setItem('token', data.token);
-      router.push('/dashboard');
+      localStorage.removeItem('userEmail');         // ✅ 기존 사용자 제거
+      localStorage.setItem('token', data.token);    // ✅ 토큰 저장
+      localStorage.setItem('userEmail', email);     // ✅ 새 사용자 저장
+      router.push('/dashboard');                    // ✅ 이동
     } else {
       setError(data.error || 'Signin failed');
     }
