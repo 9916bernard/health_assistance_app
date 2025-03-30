@@ -25,15 +25,6 @@ export async function POST(req: Request) {
     
     const body = await req.json();
     const { prompt, username , useHistoryContext } = body;
-    console.log("Incoming request:", useHistoryContext ? { prompt, username, useHistoryContext }: { prompt, username});
-
-    if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
-    }
-    if (!username || typeof username !== "string") {
-      return NextResponse.json({ error: "Username is required" }, { status: 400 });
-    }
-
     let historyContext = '';
     if (useHistoryContext) {
       const client = await clientPromise;
@@ -55,6 +46,16 @@ export async function POST(req: Request) {
           .join('\n\n');
       }
     }
+    console.log("Incoming request:", useHistoryContext ? { prompt, username, historyContext }: { prompt, username});
+
+    if (!prompt || typeof prompt !== "string") {
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    }
+    if (!username || typeof username !== "string") {
+      return NextResponse.json({ error: "Username is required" }, { status: 400 });
+    }
+
+
     const fullPrompt = `${SYSTEM_PROMPT}\n\n${
       historyContext ? historyContext + '\n\n' : ''
     }User input: ${prompt}`;
