@@ -6,15 +6,33 @@ import { LogOut, MessageSquareText, Clock } from 'lucide-react';
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 import { AnimatePresence, motion } from 'framer-motion';
 
-// Map container styles
+// 인터페이스 정의
+interface Hospital {
+  place_id: string;
+  name: string;
+  address: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
+
+interface HistoryMessage {
+  _id: string;
+  prompt: string;
+  response: string;
+  timestamp: string;
+}
+
+// 지도 컨테이너 스타일
 const mapContainerStyle = {
   width: '100%',
   height: '400px',
 };
 
-// Default center location if geolocation fails
+// 기본 위치 (뉴욕시)
 const defaultCenter = {
-  lat: 40.748817, // New York City
+  lat: 40.748817,
   lng: -73.985428,
 };
 
@@ -34,9 +52,9 @@ export default function Dashboard() {
   const [medicationFdaInfo, setMedicationFdaInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingHospitals, setLoadingHospitals] = useState(false);
-  const [hospitals, setHospitals] = useState<any[]>([]);
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryMessage[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
 
@@ -51,9 +69,8 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userEmail = localStorage.getItem('userEmail');
-  
     if (!token || !userEmail) {
-      router.replace('/signin'); // ✅ 로그인 안 되어 있으면 로그인 페이지로
+      router.replace('/signin'); // 로그인 되어 있지 않으면 signin 페이지로 이동
     } else {
       setAuthorized(true);
     }
@@ -100,7 +117,7 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('userEmail'); // 👈 이게 누락되면 문제 생김
+    localStorage.removeItem('userEmail'); // userEmail 제거
     router.push('/signin');
   };
 
@@ -127,10 +144,10 @@ export default function Dashboard() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, username, useHistoryContext }), // ✅ 포함!
+        body: JSON.stringify({ prompt, username, useHistoryContext }),
       });
       const data = await res.json();
-      let fullText = data.text || 'No response received.';
+      const fullText = data.text || 'No response received.';
       let mainText = fullText;
       let fdaInfo = '';
       const marker = "💊 Drug Info";
@@ -195,7 +212,7 @@ export default function Dashboard() {
       const res = await fetch('/api/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }), // ✅ 사용자 email 포함해서 요청
+        body: JSON.stringify({ username }),
       });
   
       const data = await res.json();
@@ -235,14 +252,11 @@ export default function Dashboard() {
     if (!username) return;
 
     try {
-
       const res = await fetch('/api/history', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       });
-
-
       const data = await res.json();
       if (res.ok) {
         setHistory([]);
@@ -271,59 +285,65 @@ export default function Dashboard() {
 
   // Urgency Score 항상 숫자가 표시되도록 기본값 처리
   const urgencyValue = parseInt(parsedResponse.urgencyScore) || 0;
-  const urgencyBarWidth = `${(urgencyValue / 10) * 100}%`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-green-100 p-4 md:p-10">
       <div className="max-w-4xl mx-auto relative">
-      <header className="flex justify-center items-center mb-6">
-        <h1 className="text-4xl font-extrabold text-center text-amber-600 font-Cosmic Sans MS tracking-wide">
-          Symptom Sense
-        </h1>
-      </header>
+        <header className="flex justify-between items-center mb-6">
+          <h1 className="text-4xl font-extrabold text-center text-amber-600 font-Cosmic Sans MS tracking-wide">
+            Symptom Sense
+          </h1>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1 text-red-500 hover:text-red-700"
+          >
+            <LogOut size={20} />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </header>
         <div className="flex justify-between items-center mb-4">
-  <div className="flex space-x-2">
-    <button
-      className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-        activeTab === 'chat'
-          ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
-          : 'bg-gray-100 text-gray-600 hover:text-green-500'
-      }`}
-      onClick={() => setActiveTab('chat')}
-    >
-      <MessageSquareText size={18} /> Chat
-    </button>
-    <button
-      className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
-        activeTab === 'history'
-          ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
-          : 'bg-gray-100 text-gray-600 hover:text-green-500'
-      }`}
-      onClick={() => {
-        handleLoadHistory();
-        setActiveTab('history');
-      }}
-    >
-      <Clock size={18} /> History
-    </button>
-  </div>
+          <div className="flex space-x-2">
+            <button
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+                activeTab === 'chat'
+                  ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:text-green-500'
+              }`}
+              onClick={() => setActiveTab('chat')}
+            >
+              <MessageSquareText size={18} /> Chat
+            </button>
+            <button
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
+                activeTab === 'history'
+                  ? 'bg-white border-x border-t border-gray-300 text-green-600 font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:text-green-500'
+              }`}
+              onClick={() => {
+                handleLoadHistory();
+                setActiveTab('history');
+              }}
+            >
+              <Clock size={18} /> History
+            </button>
+          </div>
 
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-700 font-medium">Past Context</span>
-      <button
-        onClick={() => setUseHistoryContext(!useHistoryContext)}
-        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
-          useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
-        }`}
-      >
-        <div
-          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
-            useHistoryContext ? 'translate-x-6' : 'translate-x-0'
-          }`}
-        ></div>
-      </button>
-    </div>
-  </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700 font-medium">Past Context</span>
+            <button
+              onClick={() => setUseHistoryContext(!useHistoryContext)}
+              className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
+                useHistoryContext ? 'bg-green-500' : 'bg-gray-300'
+              }`}
+            >
+              <div
+                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+                  useHistoryContext ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              ></div>
+            </button>
+          </div>
+        </div>
         <motion.div
           layout
           transition={{ duration: 0.4, type: 'spring' }}
@@ -362,9 +382,9 @@ export default function Dashboard() {
                         <svg width="200" height="100" viewBox="0 0 200 100">
                           <defs>
                             <linearGradient id="urgencyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#facc15" />  {/* yellow-000 */}
-                              <stop offset="50%" stopColor="#f97316" /> {/* orange-500 */}
-                              <stop offset="100%" stopColor="#ef4444" /> {/* red-900 */}
+                              <stop offset="0%" stopColor="#facc15" />
+                              <stop offset="50%" stopColor="#f97316" />
+                              <stop offset="100%" stopColor="#ef4444" />
                             </linearGradient>
                           </defs>
                           <path
@@ -380,14 +400,14 @@ export default function Dashboard() {
                             y2="20"
                             stroke="black"
                             strokeWidth="2"
-                            transform={`rotate(${(urgencyValue - 5) * 18} 100 100)`} // max 180° / 10단계
+                            transform={`rotate(${(urgencyValue - 5) * 18} 100 100)`}
                           />
                           <circle
                             cx="100"
                             cy="100"
                             r="5"
                             fill="black"
-                            transform={`rotate(${(urgencyValue - 1) * 18} 100 100)`} // max 180° / 10단계
+                            transform={`rotate(${(urgencyValue - 1) * 18} 100 100)`}
                           />
                         </svg>
                         <span className="mt-2 text-xl font-bold text-gray-800">{urgencyValue}/10</span>
@@ -405,13 +425,13 @@ export default function Dashboard() {
                       <p className="text-2xl font-bold mt-2 text-center">{parsedResponse.mostLikelyCondition}</p>
                     </div>
 
-                    {/* 3. What You Can Do Now (전체 가로 사용) */}
+                    {/* What You Can Do Now */}
                     <div className="bg-white shadow p-4 rounded col-span-1 md:col-span-2">
                       <h2 className="text-lg font-semibold mb-2">What You Can Do Now</h2>
                       <p>{parsedResponse.whatYouCanDoNow}</p>
                     </div>
 
-                    {/* 4. Clinics & Hospitals */}
+                    {/* Clinics & Hospitals */}
                     <div className="bg-white shadow p-4 rounded">
                       <h2 className="text-lg font-semibold mb-2">Clinics &amp; Hospitals</h2>
                       <div className="mb-3">
@@ -443,7 +463,7 @@ export default function Dashboard() {
                                 label="You"
                               />
                             )}
-                            {hospitals.map((h: any) => (
+                            {hospitals.map((h: Hospital) => (
                               <Marker
                                 key={h.place_id}
                                 position={{ lat: h.location.lat, lng: h.location.lng }}
@@ -453,7 +473,7 @@ export default function Dashboard() {
                           </GoogleMap>
                           {hospitals.length > 0 && (
                             <ul className="mt-2 space-y-2">
-                              {hospitals.map((h: any) => (
+                              {hospitals.map((h: Hospital) => (
                                 <li key={h.place_id} className="p-2 bg-green-50 border border-green-200 rounded">
                                   <h3 className="text-sm font-bold text-green-700">{h.name}</h3>
                                   <p className="text-sm text-gray-600">{h.address}</p>
@@ -465,7 +485,7 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    {/* 5. Medication Recommendation */}
+                    {/* Medication Recommendation */}
                     <div className="bg-white shadow p-4 rounded">
                       <h2 className="text-lg font-semibold mb-2">Medication Recommendation</h2>
                       <p className="mt-2">{parsedResponse.recommendedMedication}</p>
@@ -498,7 +518,7 @@ export default function Dashboard() {
               >
                 <h2 className="font-medium text-gray-700 mb-1">Chat History:</h2>
                 <div className="max-h-64 overflow-y-auto space-y-2 text-sm">
-                  {history.map((msg) => (
+                  {history.map((msg: HistoryMessage) => (
                     <div key={msg._id} className="p-4 border rounded bg-gray-50 space-y-1">
                       <p>
                         <strong>User:</strong> {msg.prompt}

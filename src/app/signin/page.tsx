@@ -13,36 +13,31 @@ export default function SigninPage() {
 
   const handleSignin = async () => {
     setError('');
-  
     const res = await fetch('/api/auth/signin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-  
+
     const data = await res.json();
-  
     if (res.ok) {
-      localStorage.removeItem('userEmail');         // ✅ 기존 사용자 제거
-      localStorage.setItem('token', data.token);    // ✅ 토큰 저장
-      localStorage.setItem('userEmail', email);     // ✅ 새 사용자 저장
-      router.push('/dashboard');                    // ✅ 이동
+      localStorage.setItem('token', data.token);
+      router.push('/dashboard');
     } else {
-      setError(data.error || 'Signin failed');
+      setError(data.error || 'Login failed');
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-green-100 p-6">
-      {/* 모션으로 감싸서 등장 애니메이션 추가 */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-md bg-white/90 backdrop-blur p-8 rounded-lg shadow-lg"
       >
-        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800">
-          Sign In
+        <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
+          Log In
         </h2>
 
         <input
@@ -50,7 +45,7 @@ export default function SigninPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-2 border rounded mb-4 focus:ring-2 focus:ring-green-500 focus:outline-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
         />
 
         <input
@@ -58,14 +53,14 @@ export default function SigninPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-2 border rounded mb-4 focus:ring-2 focus:ring-green-500 focus:outline-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
         />
 
         <button
           onClick={handleSignin}
-          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors"
+          className="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 transition-colors"
         >
-          Sign In
+          Log In
         </button>
 
         {error && (
@@ -73,9 +68,9 @@ export default function SigninPage() {
         )}
 
         <p className="mt-6 text-sm text-center text-gray-700">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/signup" className="text-green-600 hover:underline">
-            Sign up here
+            Create an account
           </Link>
         </p>
       </motion.div>

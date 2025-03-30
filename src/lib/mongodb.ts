@@ -7,12 +7,10 @@ if (!uri) {
   throw new Error("Please define MONGODB_URI in .env.local");
 }
 
-// Caching client across hot reloads (for dev)
 let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
 
 declare global {
-  // allow global `var` cache in dev
+  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
@@ -20,6 +18,7 @@ if (!global._mongoClientPromise) {
   client = new MongoClient(uri, options);
   global._mongoClientPromise = client.connect();
 }
-clientPromise = global._mongoClientPromise!;
+
+const clientPromise = global._mongoClientPromise!;
 
 export default clientPromise;

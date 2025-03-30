@@ -1,17 +1,14 @@
-// src/app/api/history/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { id } = params;
+    const url = req.nextUrl;
+    const id = url.pathname.split("/").pop(); // get ID from URL
     const { username } = await req.json();
 
-    if (!ObjectId.isValid(id)) {
+    if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json(
         { success: false, error: "Invalid ID format" },
         { status: 400 }
