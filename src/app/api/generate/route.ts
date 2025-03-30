@@ -22,13 +22,16 @@ If the user types something unrelated to symptoms, reply:
 
 export async function POST(req: Request) {
   try {
-    const { prompt, fdaQuery } = await req.json();
+    const body = await req.json();
+    const { prompt, username } = body;
+    console.log("Incoming request:", { prompt, username });
 
     if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json(
-        { error: "Prompt is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+    }
+
+    if (!username || typeof username !== "string") {
+      return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
 
     const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
@@ -39,29 +42,32 @@ export async function POST(req: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: fullPrompt }],
-            },
-          ],
+          contents: [{ parts: [{ text: fullPrompt }] }],
         }),
       }
     );
+
     const category = categorizeQuestion(prompt);
+
 
     if (!response.ok) {
       const err = await response.json();
       console.error("Gemini API error:", err);
-      return NextResponse.json(
-        { error: "Gemini API Error", details: err },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Gemini API error", details: err }, { status: 500 });
     }
 
     const data = await response.json();
-    const text =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from Gemini.";
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
+    const category = categorizeQuestion(prompt);
+
+    const client = await clientPromise;
+    const db = client.db("health-assistant");
+    const collection = db.collection("health-data");
+
+    const result = await collection.insertOne({
+      username,
+
 
     // openFDA: 추출한 OTC Medication 이름으로 검색
     const otcMatch = text.match(/Recommanded Medication:\s*(.+)/i);
@@ -98,6 +104,7 @@ export async function POST(req: Request) {
     const db = client.db("health-assistant");
     const collection = db.collection(category);
     await collection.insertOne({
+
       prompt,
       response: text,
       otcName,
@@ -105,13 +112,12 @@ export async function POST(req: Request) {
       category,
     });
 
-    const finalText = `${text}${fdaInfo}`;
-    return NextResponse.json({ text: finalText });
+
+    return NextResponse.json({ text });
+
+
   } catch (error) {
     console.error("Server error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
