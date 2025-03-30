@@ -130,7 +130,7 @@ export default function Dashboard() {
         body: JSON.stringify({ prompt, username, useHistoryContext }), // ✅ 포함!
       });
       const data = await res.json();
-      let fullText = data.text || 'No response received.';
+      const fullText = data.text || 'No response received.';
       let mainText = fullText;
       let fdaInfo = '';
       const marker = "💊 Drug Info";
