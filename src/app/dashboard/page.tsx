@@ -23,8 +23,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      router.replace('/signin');
+    const userEmail = localStorage.getItem('userEmail');
+  
+    if (!token || !userEmail) {
+      router.replace('/signin'); // ✅ 로그인 안 되어 있으면 로그인 페이지로
     } else {
       setAuthorized(true);
     }
@@ -47,6 +49,7 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userEmail'); // 👈 이게 누락되면 문제 생김
     router.push('/signin');
   };
 
