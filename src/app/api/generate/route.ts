@@ -1,6 +1,7 @@
 // src/app/api/generate/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { categorizeQuestion } from "@/lib/categorize";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -23,7 +24,7 @@ If the user types something unrelated to symptoms, reply:
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
+    const { prompt, fdaQuery } = await req.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -32,10 +33,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ 시스템 프롬프트와 유저 프롬프트를 합치기
     const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
 
-    // ✅ Gemini API 요청
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -50,6 +49,8 @@ export async function POST(req: Request) {
         }),
       }
     );
+    const category = categorizeQuestion(prompt);
+
 
     if (!response.ok) {
       const err = await response.json();
@@ -65,15 +66,34 @@ export async function POST(req: Request) {
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
       "No response from Gemini.";
 
+    let fdaData = null;
+    if (fdaQuery && typeof fdaQuery === "string") {
+      try {
+        const fdaRes = await fetch(`https://api.fda.gov/${fdaQuery}`);
+        if (fdaRes.ok) {
+          fdaData = await fdaRes.json();
+        } else {
+          const err = await fdaRes.json();
+          console.error("openFDA API error:", err);
+          fdaData = { error: "openFDA API Error", details: err };
+        }
+      } catch (fdaErr) {
+        console.error("openFDA fetch error:", fdaErr);
+        fdaData = { error: "Failed to fetch openFDA data" };
+      }
+    }
+
     // ✅ MongoDB에 저장
     const client = await clientPromise;
+    // select collection named after the category
     const db = client.db("health-assistant");
-    const collection = db.collection("chats");
+    const collection = db.collection(category); // e.g., "Orthopedics", "General"
 
     await collection.insertOne({
       prompt,
       response: text,
       timestamp: new Date(),
+      category, // optional but nice to keep
     });
 
     return NextResponse.json({ text });
