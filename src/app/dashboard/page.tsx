@@ -495,7 +495,7 @@ export default function Dashboard() {
                       {medicationDetailVisible && (
                         <div className="mt-4">
                           <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                            {medicationFdaInfo || 'No medication details available.'}
+                            {medicationFdaInfo || "This condition may require non-medication treatment or a prescription."}
                           </p>
                         </div>
                       )}
@@ -543,6 +543,19 @@ export default function Dashboard() {
                 </button>
               </motion.div>
             )}
+            {activeTab === 'history' && showHistory && history.length === 0 && (
+  <motion.div
+    key="no-history"
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    transition={{ duration: 0.3 }}
+    className="text-center text-gray-500 p-6"
+  >
+    <p className="text-lg font-medium">No history yet.</p>
+    <p className="text-sm mt-1">Describe your symptoms to get started!</p>
+  </motion.div>
+)}
           </AnimatePresence>
         </motion.div>
       </div>
