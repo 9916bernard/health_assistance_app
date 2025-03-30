@@ -22,8 +22,9 @@ If the user types something unrelated to symptoms, reply:
 
 export async function POST(req: Request) {
   try {
+    
     const body = await req.json();
-    const { prompt, username } = body;
+    const { prompt, username , useHistoryContext } = body;
     console.log("Incoming request:", { prompt, username });
 
     if (!prompt || typeof prompt !== "string") {
@@ -33,7 +34,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
 
-    const fullPrompt = `${SYSTEM_PROMPT}\n\nUser input: ${prompt}`;
+    let historyContext = '';
+    if (useHistoryContext) {
+      const client = await clientPromise;
+      const db = client.db('health-assistant');
+      const collection = db.collection('health-data');
+
+      const past = await collection
+        .find({ username })
+        .sort({ timestamp: -1 })
+        .limit(3) // 최근 3개만 사용
+        .toArray();
+
+      if (past.length > 0) {
+        historyContext = past
+          .map(
+            (p, idx) =>
+              `Previous Diagnosis ${idx + 1}:\n- Symptoms: ${p.prompt}\n- Diagnosis: ${p.response}`
+          )
+          .join('\n\n');
+      }
+    }
+    const fullPrompt = `${SYSTEM_PROMPT}\n\n${
+      historyContext ? historyContext + '\n\n' : ''
+    }User input: ${prompt}`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,

@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [authorized, setAuthorized] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [rawResponse, setRawResponse] = useState('');
+  const [useHistoryContext, setUseHistoryContext] = useState(false);
   const [parsedResponse, setParsedResponse] = useState({
     urgencyScore: '',
     mostLikelyCondition: '',
@@ -126,7 +127,7 @@ export default function Dashboard() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, username }),
+        body: JSON.stringify({ prompt, username, useHistoryContext }), // ✅ 포함!
       });
       const data = await res.json();
       let fullText = data.text || 'No response received.';
@@ -185,14 +186,18 @@ export default function Dashboard() {
 
   const handleLoadHistory = async () => {
     const username = localStorage.getItem('userEmail');
-    if (!username) return;
-
+    if (!username) {
+      alert("You're not logged in.");
+      return;
+    }
+  
     try {
       const res = await fetch('/api/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username }), // ✅ 사용자 email 포함해서 요청
       });
+  
       const data = await res.json();
       setHistory(data.messages || []);
       setShowHistory(true);
@@ -279,7 +284,16 @@ export default function Dashboard() {
             <LogOut size={24} />
           </button>
         </header>
-
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            type="checkbox"
+            checked={useHistoryContext}
+            onChange={() => setUseHistoryContext(!useHistoryContext)}
+          />
+          <label className="text-sm text-gray-700">
+            Include past diagnoses in response
+          </label>
+        </div>
         <div className="flex space-x-2 mb-4">
           <button
             className={`flex items-center gap-2 px-4 py-2 rounded-t-lg ${
