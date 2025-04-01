@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🩺 SymptomSense
 
-## Getting Started
+SymptomSense is an AI-powered health assistant web app that helps users better understand their symptoms, check the severity of their condition, find safe medications, and locate nearby clinics—all in one place.
 
-First, run the development server:
+## 🌟 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Urgency Score** — Quickly evaluate how serious the symptoms might be.
+- **Most Likely Condition** — Get a likely diagnosis using Gemini AI.
+- **What You Can Do Now** — Get personalized advice for immediate care.
+- **Recommended Clinic** — Suggested type of clinic or specialist to visit.
+- **OTC Medication** — Safe medications you can buy without a prescription.
+- **Nearby Hospitals** — Locate nearby healthcare facilities using Google Maps.
+- **Chat History** — Store and revisit previous symptom inputs and AI responses (MongoDB).
+- **Simple or Expert Mode** — Choose between easy-to-understand explanations or professional medical language.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🧠 How It Works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Prompt Engineering**  
+   We craft dynamic, role-specific prompts for Gemini API depending on the user's selected vocabulary level (easy or expert). The prompt includes a specific structure the model must follow for reliable JSON parsing and visualization.
 
-## Learn More
+2. **AI Model (Gemini API)**  
+   We use [Google Gemini API](https://ai.google.dev/) to analyze user symptoms and return structured medical advice.
 
-To learn more about Next.js, take a look at the following resources:
+3. **OpenFDA API**  
+   The app uses the [OpenFDA API](https://open.fda.gov/apis/) to cross-reference symptoms and return safe over-the-counter medication suggestions.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Google Maps Integration**  
+   - **Geocoding API**: Converts the user’s location into coordinates.
+   - **Places API**: Finds nearby hospitals.
+   - **Maps JavaScript API**: Visually displays healthcare providers on a map.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **MongoDB Integration**  
+   All chat history, symptoms, and responses are stored securely using [MongoDB Atlas](https://www.mongodb.com/atlas/database). This enables:
+   - Persistent chat history
+   - Symptom trend tracking
+   - Personalized user experiences
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 💻 Built With
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js](https://nextjs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Gemini API](https://ai.google.dev/)
+- [OpenFDA API](https://open.fda.gov/)
+- [Google Maps API](https://developers.google.com/maps)
+- [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
