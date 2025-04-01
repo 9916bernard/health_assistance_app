@@ -1,6 +1,12 @@
 # 🩺 SymptomSense
 
+**🔗 Try it out:** [https://symptomsense.vercel.app](https://symptomsense.vercel.app)
+<img width="1710" alt="스크린샷 2025-03-31 오후 9 02 35" src="https://github.com/user-attachments/assets/5b3ee4b8-88d3-4e5d-8358-91496e2938f0" />
+<img width="1710" alt="스크린샷 2025-03-31 오후 9 02 25" src="https://github.com/user-attachments/assets/87f20030-4504-441b-b126-5e7776f02496" />
+
 SymptomSense is an AI-powered health assistant web app that helps users better understand their symptoms, check the severity of their condition, find safe medications, and locate nearby clinics—all in one place.
+
+---
 
 ## 🌟 Features
 
@@ -11,7 +17,6 @@ SymptomSense is an AI-powered health assistant web app that helps users better u
 - **OTC Medication** — Safe medications you can buy without a prescription.
 - **Nearby Hospitals** — Locate nearby healthcare facilities using Google Maps.
 - **Chat History** — Store and revisit previous symptom inputs and AI responses (MongoDB).
-- **Simple or Expert Mode** — Choose between easy-to-understand explanations or professional medical language.
 
 ---
 
@@ -22,6 +27,7 @@ SymptomSense is an AI-powered health assistant web app that helps users better u
 
 2. **AI Model (Gemini API)**  
    We use [Google Gemini API](https://ai.google.dev/) to analyze user symptoms and return structured medical advice.
+
 
 3. **OpenFDA API**  
    The app uses the [OpenFDA API](https://open.fda.gov/apis/) to cross-reference symptoms and return safe over-the-counter medication suggestions.
@@ -48,3 +54,5 @@ SymptomSense is an AI-powered health assistant web app that helps users better u
 - [OpenFDA API](https://open.fda.gov/)
 - [Google Maps API](https://developers.google.com/maps)
 - [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+
+
